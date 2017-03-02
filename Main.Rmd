@@ -1,0 +1,39 @@
+---
+title: "Data simplification and Linear Regression"
+output: html_notebook
+---
+```{r}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+require(bit64)
+```
+
+
+```{r}
+Accuracy = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
+A1=Accuracy %>%
+  group_by(task_id)%>%
+  summarise(mean(accuracy),sum(work_duration))
+View(A1)
+```
+
+```{r}
+plot(A1$`sum(work_duration)`,A1$`mean(accuracy)`)
+
+```
+
+```{r}
+as.numeric(Accuracy$keypress_keytypeint)
+for(x in Accuracy$keypress_keytypeint)
+{
+  if(is.na(x)==TRUE)
+  keytypeint=0
+}
+View(Accuracy)
+A2=Accuracy %>%
+  group_by(task_id)%>%
+  summarise(mean(accuracy),count(keypress_keytypeint==1)/count(keypress_keytypeint))
+View(A2)
+```
