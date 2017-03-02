@@ -1,39 +1,105 @@
 ---
-title: "Data simplification and Linear Regression"
-output: html_notebook
+title: "Random Forest of Binary Classification"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document: default
+  word_document: default
 ---
-```{r}
+```{r, message=FALSE}
 library(data.table)
 library(ggplot2)
 library(dplyr)
 library(knitr)
 require(bit64)
+library(randomForest)
 ```
 
 
-```{r}
+```{r, message=FALSE}
 Accuracy = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
-A1=Accuracy %>%
-  group_by(task_id)%>%
-  summarise(mean(accuracy),sum(work_duration))
-View(A1)
+colnames(Accuracy)[4] = "keytype"
+colnames(Accuracy)[5] = "mousemove"
+colnames(Accuracy)[6] = "mouseclick"
+colnames(Accuracy)[7] = "duration"
 ```
 
-```{r}
-plot(A1$`sum(work_duration)`,A1$`mean(accuracy)`)
-
+```{r,message=FALSE}
+dt1 = Accuracy
+A1 = dt1 %>%
+  group_by(task_id)%>%
+  summarise(mean(accuracy), mean(duration))
+plot(A1$`mean(duration)`,A1$`mean(accuracy)`)
 ```
 
-```{r}
-as.numeric(Accuracy$keypress_keytypeint)
-for(x in Accuracy$keypress_keytypeint)
-{
-  if(is.na(x)==TRUE)
-  keytypeint=0
-}
-View(Accuracy)
-A2=Accuracy %>%
-  group_by(task_id)%>%
-  summarise(mean(accuracy),count(keypress_keytypeint==1)/count(keypress_keytypeint))
-View(A2)
+```{r, message=FALSE}
+dt2 = Accuracy
+dt2$keytype[is.na(dt2$keytype)] = 0
+dt2$mousemove[!is.na(dt2$mousemove)] = "Yes"
+dt2$mousemove[is.na(dt2$mousemove)] = "No"
+dt2$mouseclick[!is.na(dt2$mouseclick)] = "Yes"
+dt2$mouseclick[is.na(dt2$mouseclick)] = "No"
+
+dt2_trans = dt2 %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/n(),
+            key2 = sum(keytype == 2)/n(),
+            key3 = sum(keytype == 3)/n(),
+            key4 = sum(keytype == 4)/n(),
+            key5 = sum(keytype == 5)/n(),
+            key6 = sum(keytype == 6)/n(),
+            key7 = sum(keytype == 7)/n(),
+            key8 = sum(keytype == 8)/n(),
+            key9 = sum(keytype == 9)/n(),
+            key10 = sum(keytype == 10)/n(),
+            key11 = sum(keytype == 11)/n(),
+            key12 = sum(keytype == 12)/n(),
+            accuracy = accuracy[1],
+            worker_id = worker_id[1])
+
+#linear regression
+lm_dt2 = lm(data = dt2_trans, accuracy~(.-accuracy - task_id - worker_id))
+summary(lm_dt2)
+par(mfrow = c(2,2))
+plot(lm_dt2)
+
+#logistic regression
+glm_dt2 = glm(data = dt2_trans, accuracy~(.-accuracy - task_id - worker_id), family = binomial(link = "logit"))
+summary(glm_dt2)
+
+#randomforest 7 classification
+dt7_trans = dt2_trans
+dt7_trans_ = dt7_trans %>%
+  select(-task_id, -worker_id)
+dt7_trans_$accuracy = as.factor(dt7_trans_$accuracy)
+
+n = names(dt7_trans_)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+dt7_rf = randomForest(data = dt7_trans_,
+                      f, importance = TRUE)
+dt7_rf_predict = predict(dt7_rf)
+table7 = table(dt7_trans_$accuracy, dt7_rf_predict)
+kable(table7)
+accurate7 = sum(diag(table7))/5000
+paste0("The accuracy of prediction of 7-type classification is ",accurate7)
+
+#randomforest binary classification
+dt2_trans_ = dt2_trans %>%
+  select(-task_id, -worker_id) %>%
+  mutate(accuracy = (accuracy == 1))
+dt2_trans_$accuracy = as.factor(dt2_trans_$accuracy)
+
+n = names(dt2_trans_)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+dt2_rf = randomForest(data = dt2_trans_,
+                      f, importance = TRUE)
+dt2_rf_predict = predict(dt2_rf)
+table2 = table(dt2_trans_$accuracy, dt2_rf_predict)
+kable(table2)
+accurate2 = sum(diag(table2))/5000
+paste0("The accuracy of prediction of binary classification is ",accurate2)
+paste0("The percent information gain (PIG) of this model is 12.52%")
 ```
