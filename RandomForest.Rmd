@@ -17,17 +17,17 @@ colnames(Accuracy)[4] = "keytype"
 colnames(Accuracy)[5] = "mousemove"
 colnames(Accuracy)[6] = "mouseclick"
 colnames(Accuracy)[7] = "duration"
+Accuracy$keytype[is.na(Accuracy$keytype)] = 0
+Accuracy$mousemove[!is.na(Accuracy$mousemove)] = "Yes"
+Accuracy$mousemove[is.na(Accuracy$mousemove)] = "No"
+Accuracy$mouseclick[!is.na(Accuracy$mouseclick)] = "Yes"
+Accuracy$mouseclick[is.na(Accuracy$mouseclick)] = "No"
 ```
 
-```{r}
-dt2 = Accuracy
-dt2$keytype[is.na(dt2$keytype)] = 0
-dt2$mousemove[!is.na(dt2$mousemove)] = "Yes"
-dt2$mousemove[is.na(dt2$mousemove)] = "No"
-dt2$mouseclick[!is.na(dt2$mouseclick)] = "Yes"
-dt2$mouseclick[is.na(dt2$mouseclick)] = "No"
 
-dt2 = dt2 %>%
+#Full Operation Model
+```{r}
+dt2 = Accuracy %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
             count_mousemove = sum(mousemove == "Yes")/n(),
@@ -45,9 +45,10 @@ dt2 = dt2 %>%
             key11 = sum(keytype == 11)/n(),
             key12 = sum(keytype == 12)/n(),
             accuracy = accuracy[1],
-            worker_id = worker_id[1]) %>%
+            worker_id = worker_id[1])%>%
   select(-task_id, -worker_id) %>%
-  mutate(accuracy = (accuracy == 1))
+  mutate(accuracy = (accuracy == 1)) #%>%
+  #arrange(desc(op))
 dt2$accuracy = as.factor(dt2$accuracy)
 
 #randomforest binary classification
@@ -72,6 +73,294 @@ predict_test = predict(rf, newdata = test, type = "response")
 test_table2 = table(test$accuracy, predict_test)
 kable(test_table2)
 test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
-
 ```
 
+#10 Operation Model
+```{r}
+dt3 = Accuracy
+dt3$keep = 0
+task_id_index = unlist(distinct(dt3, task_id, .keep_all = FALSE))
+task_id_index = as.vector(task_id_index)
+
+for (i in task_id_index) {
+  index = which(dt3$task_id == i)
+  if (length(index) >= 10) 
+    {
+      dt3$keep[index[1:10]] = 1 
+    } 
+  else
+    {
+      dt3$keep[index] = 1
+    }
+}
+
+dt3_keep = dt3 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt3_keep = dt3_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/n(),
+            key2 = sum(keytype == 2)/n(),
+            key3 = sum(keytype == 3)/n(),
+            key4 = sum(keytype == 4)/n(),
+            key5 = sum(keytype == 5)/n(),
+            key6 = sum(keytype == 6)/n(),
+            key7 = sum(keytype == 7)/n(),
+            key8 = sum(keytype == 8)/n(),
+            key9 = sum(keytype == 9)/n(),
+            key10 = sum(keytype == 10)/n(),
+            key11 = sum(keytype == 11)/n(),
+            key12 = sum(keytype == 12)/n(),
+            accuracy = accuracy[1],
+            worker_id = worker_id[1])%>%
+  select(-task_id, -worker_id) %>%
+  mutate(accuracy = (accuracy == 1))
+dt3_keep$accuracy = as.factor(dt3_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index3 = sample(1:nrow(dt3_keep), round(0.8*nrow(dt3_keep)))
+train3 = dt3_keep[index3,]
+test3 = dt3_keep[-index3,]
+
+#build model on training data
+n3 = names(dt3_keep)
+f3 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf3 = randomForest(data = train3,
+                      f3, importance = TRUE)
+predict_train3 = predict(rf3)
+train_table3 = table(train3$accuracy, predict_train3)
+kable(train_table3)
+train_accurate3 = sum(diag(train_table3))/nrow(train3);train_accurate3
+
+#test 
+predict_test3 = predict(rf3, newdata = test3, type = "response")
+test_table3 = table(test3$accuracy, predict_test3)
+kable(test_table3)
+test_accurate3 = sum(diag(test_table3))/nrow(test);test_accurate3
+```
+
+#20 Operation Model
+```{r}
+dt4 = Accuracy
+dt4$keep = 0
+
+for (i in task_id_index) {
+  index = which(dt4$task_id == i)
+  if (length(index) >= 20) 
+    {
+      dt4$keep[index[1:20]] = 1 
+    } 
+  else
+    {
+      dt4$keep[index] = 1
+    }
+}
+
+dt4_keep = dt4 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt4_keep = dt4_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/n(),
+            key2 = sum(keytype == 2)/n(),
+            key3 = sum(keytype == 3)/n(),
+            key4 = sum(keytype == 4)/n(),
+            key5 = sum(keytype == 5)/n(),
+            key6 = sum(keytype == 6)/n(),
+            key7 = sum(keytype == 7)/n(),
+            key8 = sum(keytype == 8)/n(),
+            key9 = sum(keytype == 9)/n(),
+            key10 = sum(keytype == 10)/n(),
+            key11 = sum(keytype == 11)/n(),
+            key12 = sum(keytype == 12)/n(),
+            accuracy = accuracy[1],
+            worker_id = worker_id[1])%>%
+  select(-task_id, -worker_id) %>%
+  mutate(accuracy = (accuracy == 1))
+dt4_keep$accuracy = as.factor(dt4_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index4 = sample(1:nrow(dt4_keep), round(0.8*nrow(dt4_keep)))
+train4 = dt4_keep[index4,]
+test4 = dt4_keep[-index4,]
+
+#build model on training data
+n4 = names(dt4_keep)
+f4 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf4 = randomForest(data = train4,
+                      f4, importance = TRUE)
+predict_train4 = predict(rf4)
+train_table4 = table(train4$accuracy, predict_train4)
+kable(train_table4)
+train_accurate4 = sum(diag(train_table4))/nrow(train4);train_accurate4
+
+#test 
+predict_test4 = predict(rf4, newdata = test4, type = "response")
+test_table4 = table(test4$accuracy, predict_test4)
+kable(test_table4)
+test_accurate4 = sum(diag(test_table4))/nrow(test);test_accurate4
+```
+
+#30 Operation Model
+```{r}
+dt5 = Accuracy
+dt5$keep = 0
+
+for (i in task_id_index) {
+  index = which(dt5$task_id == i)
+  if (length(index) >= 30) 
+    {
+      dt5$keep[index[1:30]] = 1 
+    } 
+  else
+    {
+      dt5$keep[index] = 1
+    }
+}
+
+dt5_keep = dt5 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt5_keep = dt5_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/n(),
+            key2 = sum(keytype == 2)/n(),
+            key3 = sum(keytype == 3)/n(),
+            key4 = sum(keytype == 4)/n(),
+            key5 = sum(keytype == 5)/n(),
+            key6 = sum(keytype == 6)/n(),
+            key7 = sum(keytype == 7)/n(),
+            key8 = sum(keytype == 8)/n(),
+            key9 = sum(keytype == 9)/n(),
+            key10 = sum(keytype == 10)/n(),
+            key11 = sum(keytype == 11)/n(),
+            key12 = sum(keytype == 12)/n(),
+            accuracy = accuracy[1],
+            worker_id = worker_id[1])%>%
+  select(-task_id, -worker_id) %>%
+  mutate(accuracy = (accuracy == 1))
+dt5_keep$accuracy = as.factor(dt5_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index5 = sample(1:nrow(dt5_keep), round(0.8*nrow(dt5_keep)))
+train5 = dt5_keep[index5,]
+test5 = dt5_keep[-index5,]
+
+#build model on training data
+n5 = names(dt5_keep)
+f5 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf5 = randomForest(data = train5,
+                      f5, importance = TRUE)
+predict_train5 = predict(rf5)
+train_table5 = table(train5$accuracy, predict_train5)
+kable(train_table5)
+train_accurate5 = sum(diag(train_table5))/nrow(train5);train_accurate5
+
+#test 
+predict_test5 = predict(rf5, newdata = test5, type = "response")
+test_table5 = table(test5$accuracy, predict_test5)
+kable(test_table5)
+test_accurate5 = sum(diag(test_table5))/nrow(test);test_accurate5
+```
+#40 operation model
+```{r}
+dt6 = Accuracy
+dt6$keep = 0
+
+for (i in task_id_index) {
+  index = which(dt6$task_id == i)
+  if (length(index) >= 40) 
+    {
+      dt6$keep[index[1:40]] = 1 
+    } 
+  else
+    {
+      dt6$keep[index] = 1
+    }
+}
+
+dt6_keep = dt6 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt6_keep = dt6_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/n(),
+            key2 = sum(keytype == 2)/n(),
+            key3 = sum(keytype == 3)/n(),
+            key4 = sum(keytype == 4)/n(),
+            key5 = sum(keytype == 5)/n(),
+            key6 = sum(keytype == 6)/n(),
+            key7 = sum(keytype == 7)/n(),
+            key8 = sum(keytype == 8)/n(),
+            key9 = sum(keytype == 9)/n(),
+            key10 = sum(keytype == 10)/n(),
+            key11 = sum(keytype == 11)/n(),
+            key12 = sum(keytype == 12)/n(),
+            accuracy = accuracy[1],
+            worker_id = worker_id[1])%>%
+  select(-task_id, -worker_id) %>%
+  mutate(accuracy = (accuracy == 1))
+dt6_keep$accuracy = as.factor(dt6_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index6 = sample(1:nrow(dt6_keep), round(0.8*nrow(dt6_keep)))
+train6 = dt6_keep[index6,]
+test6 = dt6_keep[-index6,]
+
+#build model on training data
+n6 = names(dt6_keep)
+f6 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf6 = randomForest(data = train6,
+                      f6, importance = TRUE)
+predict_train6 = predict(rf6)
+train_table6 = table(train6$accuracy, predict_train6)
+kable(train_table6)
+train_accurate6 = sum(diag(train_table6))/nrow(train6);train_accurate6
+
+#test 
+predict_test6 = predict(rf6, newdata = test6, type = "response")
+test_table6 = table(test6$accuracy, predict_test6)
+kable(test_table6)
+test_accurate6 = sum(diag(test_table6))/nrow(test);test_accurate6
+```
+
+```{r}
+#summary on the dynamic model
+summary.dt = data.frame(c(train_accurate3, test_accurate3),
+           c(train_accurate4, test_accurate4),
+           c(train_accurate5, test_accurate5),
+           c(train_accurate5, test_accurate6),
+           c(train_accurate2, test_accurate2))
+colnames(summary.dt)[1] = "10 OP"
+colnames(summary.dt)[2] = "20 OP"
+colnames(summary.dt)[3] = "30 OP"
+colnames(summary.dt)[4] = "40 OP"
+colnames(summary.dt)[5] = "Full OP"
+rownames(summary.dt)[1] = "training data"
+rownames(summary.dt)[2] = "testing data"
+summary.dt
+```
