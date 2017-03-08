@@ -1,0 +1,77 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r, message=FALSE}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+require(bit64)
+library(randomForest)
+```
+
+```{r}
+Accuracy = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
+colnames(Accuracy)[4] = "keytype"
+colnames(Accuracy)[5] = "mousemove"
+colnames(Accuracy)[6] = "mouseclick"
+colnames(Accuracy)[7] = "duration"
+```
+
+```{r}
+dt2 = Accuracy
+dt2$keytype[is.na(dt2$keytype)] = 0
+dt2$mousemove[!is.na(dt2$mousemove)] = "Yes"
+dt2$mousemove[is.na(dt2$mousemove)] = "No"
+dt2$mouseclick[!is.na(dt2$mouseclick)] = "Yes"
+dt2$mouseclick[is.na(dt2$mouseclick)] = "No"
+
+dt2 = dt2 %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/n(),
+            key2 = sum(keytype == 2)/n(),
+            key3 = sum(keytype == 3)/n(),
+            key4 = sum(keytype == 4)/n(),
+            key5 = sum(keytype == 5)/n(),
+            key6 = sum(keytype == 6)/n(),
+            key7 = sum(keytype == 7)/n(),
+            key8 = sum(keytype == 8)/n(),
+            key9 = sum(keytype == 9)/n(),
+            key10 = sum(keytype == 10)/n(),
+            key11 = sum(keytype == 11)/n(),
+            key12 = sum(keytype == 12)/n(),
+            accuracy = accuracy[1],
+            worker_id = worker_id[1]) %>%
+  select(-task_id, -worker_id) %>%
+  mutate(accuracy = (accuracy == 1))
+dt2$accuracy = as.factor(dt2$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index = sample(1:nrow(dt2), round(0.8*nrow(dt2)))
+train = dt2[index,]
+test = dt2[-index,]
+
+#build model on training data
+n = names(dt2)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf = randomForest(data = train,
+                      f, importance = TRUE)
+predict_train = predict(rf)
+train_table2 = table(train$accuracy, predict_train)
+kable(train_table2)
+train_accurate2 = sum(diag(train_table2))/nrow(train);train_accurate2
+
+#test 
+predict_test = predict(rf, newdata = test, type = "response")
+test_table2 = table(test$accuracy, predict_test)
+kable(test_table2)
+test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
+
+```
+
