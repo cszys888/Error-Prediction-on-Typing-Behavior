@@ -30,23 +30,24 @@ Accuracy$mouseclick[is.na(Accuracy$mouseclick)] = "No"
 dt2 = Accuracy %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
-            count_mousemove = sum(mousemove == "Yes")/n(),
-            count_mouseclick = sum(mouseclick == "Yes")/n(),
-            key1 = sum(keytype == 1)/n(),
-            key2 = sum(keytype == 2)/n(),
-            key3 = sum(keytype == 3)/n(),
-            key4 = sum(keytype == 4)/n(),
-            key5 = sum(keytype == 5)/n(),
-            key6 = sum(keytype == 6)/n(),
-            key7 = sum(keytype == 7)/n(),
-            key8 = sum(keytype == 8)/n(),
-            key9 = sum(keytype == 9)/n(),
-            key10 = sum(keytype == 10)/n(),
-            key11 = sum(keytype == 11)/n(),
-            key12 = sum(keytype == 12)/n(),
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
             accuracy = accuracy[1],
             worker_id = worker_id[1])%>%
-  select(-task_id, -worker_id) %>%
+  select(-task_id, -worker_id, -total_op) %>%
   mutate(accuracy = (accuracy == 1)) #%>%
   #arrange(desc(op))
 dt2$accuracy = as.factor(dt2$accuracy)
@@ -101,23 +102,24 @@ dt3_keep = dt3 %>%
 dt3_keep = dt3_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
-            count_mousemove = sum(mousemove == "Yes")/n(),
-            count_mouseclick = sum(mouseclick == "Yes")/n(),
-            key1 = sum(keytype == 1)/n(),
-            key2 = sum(keytype == 2)/n(),
-            key3 = sum(keytype == 3)/n(),
-            key4 = sum(keytype == 4)/n(),
-            key5 = sum(keytype == 5)/n(),
-            key6 = sum(keytype == 6)/n(),
-            key7 = sum(keytype == 7)/n(),
-            key8 = sum(keytype == 8)/n(),
-            key9 = sum(keytype == 9)/n(),
-            key10 = sum(keytype == 10)/n(),
-            key11 = sum(keytype == 11)/n(),
-            key12 = sum(keytype == 12)/n(),
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
             accuracy = accuracy[1],
             worker_id = worker_id[1])%>%
-  select(-task_id, -worker_id) %>%
+  select(-task_id, -worker_id, -total_op) %>%
   mutate(accuracy = (accuracy == 1))
 dt3_keep$accuracy = as.factor(dt3_keep$accuracy)
 
@@ -169,23 +171,24 @@ dt4_keep = dt4 %>%
 dt4_keep = dt4_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
             count_mousemove = sum(mousemove == "Yes")/n(),
             count_mouseclick = sum(mouseclick == "Yes")/n(),
-            key1 = sum(keytype == 1)/n(),
-            key2 = sum(keytype == 2)/n(),
-            key3 = sum(keytype == 3)/n(),
-            key4 = sum(keytype == 4)/n(),
-            key5 = sum(keytype == 5)/n(),
-            key6 = sum(keytype == 6)/n(),
-            key7 = sum(keytype == 7)/n(),
-            key8 = sum(keytype == 8)/n(),
-            key9 = sum(keytype == 9)/n(),
-            key10 = sum(keytype == 10)/n(),
-            key11 = sum(keytype == 11)/n(),
-            key12 = sum(keytype == 12)/n(),
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
             accuracy = accuracy[1],
             worker_id = worker_id[1])%>%
-  select(-task_id, -worker_id) %>%
+  select(-task_id, -worker_id, -total_op) %>%
   mutate(accuracy = (accuracy == 1))
 dt4_keep$accuracy = as.factor(dt4_keep$accuracy)
 
@@ -237,23 +240,24 @@ dt5_keep = dt5 %>%
 dt5_keep = dt5_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
             count_mousemove = sum(mousemove == "Yes")/n(),
             count_mouseclick = sum(mouseclick == "Yes")/n(),
-            key1 = sum(keytype == 1)/n(),
-            key2 = sum(keytype == 2)/n(),
-            key3 = sum(keytype == 3)/n(),
-            key4 = sum(keytype == 4)/n(),
-            key5 = sum(keytype == 5)/n(),
-            key6 = sum(keytype == 6)/n(),
-            key7 = sum(keytype == 7)/n(),
-            key8 = sum(keytype == 8)/n(),
-            key9 = sum(keytype == 9)/n(),
-            key10 = sum(keytype == 10)/n(),
-            key11 = sum(keytype == 11)/n(),
-            key12 = sum(keytype == 12)/n(),
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
             accuracy = accuracy[1],
             worker_id = worker_id[1])%>%
-  select(-task_id, -worker_id) %>%
+  select(-task_id, -worker_id, -total_op) %>%
   mutate(accuracy = (accuracy == 1))
 dt5_keep$accuracy = as.factor(dt5_keep$accuracy)
 
@@ -304,23 +308,24 @@ dt6_keep = dt6 %>%
 dt6_keep = dt6_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
-            count_mousemove = sum(mousemove == "Yes")/n(),
-            count_mouseclick = sum(mouseclick == "Yes")/n(),
-            key1 = sum(keytype == 1)/n(),
-            key2 = sum(keytype == 2)/n(),
-            key3 = sum(keytype == 3)/n(),
-            key4 = sum(keytype == 4)/n(),
-            key5 = sum(keytype == 5)/n(),
-            key6 = sum(keytype == 6)/n(),
-            key7 = sum(keytype == 7)/n(),
-            key8 = sum(keytype == 8)/n(),
-            key9 = sum(keytype == 9)/n(),
-            key10 = sum(keytype == 10)/n(),
-            key11 = sum(keytype == 11)/n(),
-            key12 = sum(keytype == 12)/n(),
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
             accuracy = accuracy[1],
             worker_id = worker_id[1])%>%
-  select(-task_id, -worker_id) %>%
+  select(-task_id, -worker_id, -total_op) %>%
   mutate(accuracy = (accuracy == 1))
 dt6_keep$accuracy = as.factor(dt6_keep$accuracy)
 
