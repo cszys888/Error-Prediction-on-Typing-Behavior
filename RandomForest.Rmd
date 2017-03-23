@@ -351,6 +351,7 @@ predict_test6 = predict(rf6, newdata = test6, type = "response")
 test_table6 = table(test6$accuracy, predict_test6)
 kable(test_table6)
 test_accurate6 = sum(diag(test_table6))/nrow(test);test_accurate6
+#To add info gain
 ```
 
 ```{r}
