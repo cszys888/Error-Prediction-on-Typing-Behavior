@@ -19,7 +19,7 @@ library(lubridate)
 ```
 
 ```{r}
-df = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_df_Prediction.tsv') 
+df = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
 colnames(df)[4] = "keytype"
 colnames(df)[5] = "mousemove"
 colnames(df)[6] = "mouseclick"
@@ -65,7 +65,8 @@ worker_profile = worker_profile %>%
 
 #join worker_profile with df
 dt1 = inner_join(df, worker_profile)
-
+dt1 = dt1 %>%
+  mutate(signkey = ())
 ```
 
 
@@ -96,8 +97,7 @@ dt2 = dt1 %>%
             onboard_duration = onboard_duration[1],
             age = age[1])%>%
   select(-task_id, -worker_id, -total_op) %>%
-  mutate(accuracy = (accuracy == 1)) #%>%
-  #arrange(desc(op))
+  mutate(accuracy = (accuracy == 1)) 
 dt2$accuracy = as.factor(dt2$accuracy)
 
 #randomforest binary classification
@@ -124,6 +124,7 @@ test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
 
 #variable importance
 varImpPlot(rf2)
+
 ```
 
 #10 Operation Model
