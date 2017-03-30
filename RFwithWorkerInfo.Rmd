@@ -501,3 +501,79 @@ rownames(summary.dt)[3] = "Testing Accuracy"
 rownames(summary.dt)[4] = "Testing PIG"
 summary.dt
 ```
+#Rotate Full Operation Model
+```{r}
+# dt2 = dt1 %>%
+#  group_by(task_id) %>%
+#  summarise(duration = duration[1],
+#            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+#            count_mousemove = sum(mousemove == "Yes")/total_op,
+#            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+#            key1 = sum(keytype == 1)/total_op,
+#            key2 = sum(keytype == 2)/total_op,
+#            key3 = sum(keytype == 3)/total_op,
+#            key4 = sum(keytype == 4)/total_op,
+# key5 = sum(keytype == 5)/total_op,
+# key6 = sum(keytype == 6)/total_op,
+# key7 = sum(keytype == 7)/total_op,
+# key8 = sum(keytype == 8)/total_op,
+# key9 = sum(keytype == 9)/total_op,
+# key10 = sum(keytype == 10)/total_op,
+# key11 = sum(keytype == 11)/total_op,
+# key12 = sum(keytype == 12)/total_op,
+#             accuracy = accuracy[1],
+#             worker_id = worker_id[1],
+#             gender = gender[1],
+#             academic_degree = academic_degree[1],
+#             onboard_duration = onboard_duration[1],
+#             age = age[1])%>%
+#   select(-task_id, -worker_id, -total_op) %>%
+#   mutate(accuracy = (accuracy == 1)) #%>%
+#   #arrange(desc(op))
+# dt2$accuracy = as.factor(dt2$accuracy)
+
+
+rotate_full = dt2[1,-2]
+
+for(i in 2:4){
+ rotate_full = rbind(rotate_full,dt2[i,-2])
+}
+
+m =ncol(dt2)
+df.dt2_1  = dt2[,-i]
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index = sample(1:nrow(dt2), round(0.8*nrow(dt2)))
+train = dt2[index,]
+test = dt2[-index,]
+
+#build model on training data
+n = names(dt2)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf = randomForest(data = train,
+                      f, importance = TRUE)
+predict_train = predict(rf)
+train_table2 = table(train$accuracy, predict_train)
+kable(train_table2)
+train_accurate2 = sum(diag(train_table2))/nrow(train);train_accurate2
+
+#test 
+predict_test = predict(rf, newdata = test, type = "response")
+test_table2 = table(test$accuracy, predict_test)
+kable(test_table2)
+test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
+
+#Calculate Information Gain
+matrix_train2=train_table2/sum(train_table2)
+Entro_Condi = -sum(matrix_train2[1,])*log2(sum(matrix_train2[1,]))-sum(matrix_train2[2,])*log2(sum(matrix_train2[2,]))
+Entro_Class = -sum(matrix_train2[,1])*log2(sum(matrix_train2[,1]))-sum(matrix_train2[,2])*log2(sum(matrix_train2[,2]))
+Entro_Matri = -sum(matrix_train2[1,1])*log2(sum(matrix_train2[1,1]))-sum(matrix_train2[1,2])*log2(sum(matrix_train2[1,2]))-sum(matrix_train2[2,1])*log2(sum(matrix_train2[2,1]))-sum(matrix_train2[2,2])*log2(sum(matrix_train2[2,2]))
+PIG_2_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_train
+
+matrix_test2=test_table2/sum(test_table2)
+Entro_Condi = -sum(matrix_test2[1,])*log2(sum(matrix_test2[1,]))-sum(matrix_test2[2,])*log2(sum(matrix_test2[2,]))
+Entro_Class = -sum(matrix_test2[,1])*log2(sum(matrix_test2[,1]))-sum(matrix_test2[,2])*log2(sum(matrix_test2[,2]))
+Entro_Matri = -sum(matrix_test2[1,1])*log2(sum(matrix_test2[1,1]))-sum(matrix_test2[1,2])*log2(sum(matrix_test2[1,2]))-sum(matrix_test2[2,1])*log2(sum(matrix_test2[2,1]))-sum(matrix_test2[2,2])*log2(sum(matrix_test2[2,2]))
+PIG_2_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_test
+```
