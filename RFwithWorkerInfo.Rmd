@@ -19,16 +19,16 @@ library(lubridate)
 ```
 
 ```{r}
-Accuracy = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
-colnames(Accuracy)[4] = "keytype"
-colnames(Accuracy)[5] = "mousemove"
-colnames(Accuracy)[6] = "mouseclick"
-colnames(Accuracy)[7] = "duration"
-Accuracy$keytype[is.na(Accuracy$keytype)] = 0
-Accuracy$mousemove[!is.na(Accuracy$mousemove)] = "Yes"
-Accuracy$mousemove[is.na(Accuracy$mousemove)] = "No"
-Accuracy$mouseclick[!is.na(Accuracy$mouseclick)] = "Yes"
-Accuracy$mouseclick[is.na(Accuracy$mouseclick)] = "No"
+df = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_df_Prediction.tsv') 
+colnames(df)[4] = "keytype"
+colnames(df)[5] = "mousemove"
+colnames(df)[6] = "mouseclick"
+colnames(df)[7] = "duration"
+df$keytype[is.na(df$keytype)] = 0
+df$mousemove[!is.na(df$mousemove)] = "Yes"
+df$mousemove[is.na(df$mousemove)] = "No"
+df$mouseclick[!is.na(df$mouseclick)] = "Yes"
+df$mouseclick[is.na(df$mouseclick)] = "No"
 
 #clean the data of worker info
 worker_profile = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/receipt_worker_profile.tsv') 
@@ -63,8 +63,8 @@ worker_profile$age = 2017 - worker_profile$birth_year
 worker_profile = worker_profile %>%
   select(-onbarded_date, -birth_year)
 
-#join worker_profile with Accuracy
-dt1 = inner_join(Accuracy, worker_profile)
+#join worker_profile with df
+dt1 = inner_join(df, worker_profile)
 
 ```
 
@@ -110,19 +110,19 @@ test = dt2[-index,]
 #build model on training data
 n = names(dt2)
 f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
-rf = randomForest(data = train,
-                      f, importance = TRUE)
-predict_train = predict(rf)
+rf2 = randomForest(data = train, f, importance = TRUE)
+predict_train = predict(rf2)
 train_table2 = table(train$accuracy, predict_train)
 kable(train_table2)
 train_accurate2 = sum(diag(train_table2))/nrow(train);train_accurate2
 
 #test 
-predict_test = predict(rf, newdata = test, type = "response")
+predict_test = predict(rf2, newdata = test, type = "response")
 test_table2 = table(test$accuracy, predict_test)
 kable(test_table2)
 test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
 
+<<<<<<< HEAD
 #Calculate Information Gain
 matrix_train2=train_table2/sum(train_table2)
 Entro_Condi = -sum(matrix_train2[1,])*log2(sum(matrix_train2[1,]))-sum(matrix_train2[2,])*log2(sum(matrix_train2[2,]))
@@ -135,6 +135,10 @@ Entro_Condi = -sum(matrix_test2[1,])*log2(sum(matrix_test2[1,]))-sum(matrix_test
 Entro_Class = -sum(matrix_test2[,1])*log2(sum(matrix_test2[,1]))-sum(matrix_test2[,2])*log2(sum(matrix_test2[,2]))
 Entro_Matri = -sum(matrix_test2[1,1])*log2(sum(matrix_test2[1,1]))-sum(matrix_test2[1,2])*log2(sum(matrix_test2[1,2]))-sum(matrix_test2[2,1])*log2(sum(matrix_test2[2,1]))-sum(matrix_test2[2,2])*log2(sum(matrix_test2[2,2]))
 PIG_2_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_test
+=======
+#variable importance
+varImpPlot(rf2)
+>>>>>>> 5da1f188d74ea3bacc81574cf9ce657aa1a95c8c
 ```
 
 #10 Operation Model
