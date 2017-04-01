@@ -526,7 +526,8 @@ rownames(summary.dt)[3] = "Testing Accuracy"
 rownames(summary.dt)[4] = "Testing PIG"
 summary.dt
 ```
-#Rotate Full Operation Model
+
+#Rotate Full Operation Modelm, no longer useful
 ```{r}
 rotate_full = data.frame(c(0,0,0,0))
 rownames(rotate_full)[1] = "Training Accuracy"
