@@ -68,15 +68,9 @@ worker_profile$age = 2017 - worker_profile$birth_year
 worker_profile = worker_profile %>%
   select(-onbarded_date, -birth_year)
 
-<<<<<<< HEAD
-#join worker_profile with df
-dt1 = inner_join(df, worker_profile)
-=======
 #------------------------------------------------------------------------------------------
 #join worker_profile with Accuracy
 dt1 = inner_join(Accuracy, worker_profile)
-
->>>>>>> c20d3382c85809bd24075fffb8b44a8e7dbb4362
 ```
 
 
@@ -87,9 +81,20 @@ Next_KeyType = dt1 %>%
   select(keytype) %>%
   slice(2:nrow(dt1))
 Next_KeyType[nrow(dt1),1] = 1
-dt2 = data.frame(dt1, Next_KeyType)
+
+Next_Mouse = dt1 %>%
+  select(mousemove,mouseclick) %>%
+  slice(2:nrow(dt1))
+Next_Mouse[nrow(dt1),1:2] = 0
+
+dt2 = data.frame(dt1, Next_KeyType, Next_Mouse)
 colnames(dt2)[13] = "NextType"
-dt2 = dt2 %>% mutate(KeyTypeChange = 1*(keytype == NextType))
+colnames(dt2)[14] = "NextMove"
+colnames(dt2)[15] = "NextClick"
+dt2 = dt2 %>% mutate(KeyTypeChange = 1*(keytype == NextType),
+                     MouseChange = 1*(((mousemove=="Yes")+(mouseclick=="Yes")) != ((NextMove=="Yes")+(NextClick=="Yes"))))
+
+
   
 dt2 = dt2 %>%
   group_by(task_id) %>%
@@ -110,6 +115,7 @@ dt2 = dt2 %>%
             key11 = sum(keytype == 11)/total_op,
             key12 = sum(keytype == 12)/total_op,
             TypeShift = sum(KeyTypeChange),
+            MouseShift = sum(MouseChange),
             accuracy = accuracy[1],
             worker_id = worker_id[1],
             gender = gender[1],
@@ -221,6 +227,10 @@ rownames(FN_EL2)[4] = "General Omniscient - Test"
 FN_EL2
 #0+196.5/0+173.9
 #6.6+4.3/6.5+2.4
+
+#After Adding two parameters
+#0+193/0+179.1
+#6.4+6.3/6.7+3.1
 ```
 
 
