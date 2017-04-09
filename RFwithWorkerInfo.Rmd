@@ -78,7 +78,15 @@ dt1 = inner_join(Accuracy, worker_profile)
 #Full Operation Model
 ```{r}
 #Summarise data to create input for random forest
-dt2 = dt1 %>%
+Next_KeyType = dt1 %>% 
+  select(keytype) %>%
+  slice(2:nrow(dt1))
+Next_KeyType[nrow(dt1),1] = 1
+dt2 = data.frame(dt1, Next_KeyType)
+colnames(dt2)[13] = "NextType"
+dt2 = dt2 %>% mutate(KeyTypeChange = 1*(keytype == NextType))
+  
+dt2 = dt2 %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
             total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
@@ -96,6 +104,7 @@ dt2 = dt1 %>%
             key10 = sum(keytype == 10)/total_op,
             key11 = sum(keytype == 11)/total_op,
             key12 = sum(keytype == 12)/total_op,
+            TypeShift = sum(KeyTypeChange),
             accuracy = accuracy[1],
             worker_id = worker_id[1],
             gender = gender[1],
@@ -205,8 +214,8 @@ rownames(FN_EL2)[2] = "Double Typing - Test"
 rownames(FN_EL2)[3] = "General Omniscient - Train"
 rownames(FN_EL2)[4] = "General Omniscient - Test"
 FN_EL2
-#0+196/0+175
-#6.6+4/6.5+3.6
+#0+196.5/0+173.9
+#6.6+4.3/6.5+2.4
 ```
 
 
