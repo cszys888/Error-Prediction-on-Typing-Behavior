@@ -65,8 +65,6 @@ worker_profile = worker_profile %>%
 
 #join worker_profile with df
 dt1 = inner_join(df, worker_profile)
-dt1 = dt1 %>%
-  mutate(signkey = ())
 ```
 
 
@@ -187,7 +185,7 @@ test3 = dt3_keep[-index3,]
 
 #build model on training data
 n3 = names(dt3_keep)
-f3 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f3 = as.formula(paste("accuracy~", paste(n3[!n3 %in% "accuracy"], collapse = "+")))
 rf3 = randomForest(data = train3,
                       f3, importance = TRUE)
 predict_train3 = predict(rf3)
@@ -260,7 +258,7 @@ test4 = dt4_keep[-index4,]
 
 #build model on training data
 n4 = names(dt4_keep)
-f4 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f4 = as.formula(paste("accuracy~", paste(n4[!n4 %in% "accuracy"], collapse = "+")))
 rf4 = randomForest(data = train4,
                       f4, importance = TRUE)
 predict_train4 = predict(rf4)
@@ -333,7 +331,7 @@ test5 = dt5_keep[-index5,]
 
 #build model on training data
 n5 = names(dt5_keep)
-f5 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f5 = as.formula(paste("accuracy~", paste(n5[!n5 %in% "accuracy"], collapse = "+")))
 rf5 = randomForest(data = train5,
                       f5, importance = TRUE)
 predict_train5 = predict(rf5)
@@ -405,7 +403,7 @@ test6 = dt6_keep[-index6,]
 
 #build model on training data
 n6 = names(dt6_keep)
-f6 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f6 = as.formula(paste("accuracy~", paste(n6[!n6 %in% "accuracy"], collapse = "+")))
 rf6 = randomForest(data = train6,
                       f6, importance = TRUE)
 predict_train6 = predict(rf6)
