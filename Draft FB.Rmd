@@ -1,0 +1,587 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r, message=FALSE}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+require(bit64)
+library(randomForest)
+library(stringr)
+library(lubridate)
+```
+
+```{r}
+<<<<<<< HEAD
+Accuracy = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
+colnames(Accuracy)[4] = "keytype"
+colnames(Accuracy)[5] = "mousemove"
+colnames(Accuracy)[6] = "mouseclick"
+colnames(Accuracy)[7] = "duration"
+Accuracy$keytype[is.na(Accuracy$keytype)] = 0
+Accuracy$mousemove[!is.na(Accuracy$mousemove)] = "Yes"
+Accuracy$mousemove[is.na(Accuracy$mousemove)] = "No"
+Accuracy$mouseclick[!is.na(Accuracy$mouseclick)] = "Yes"
+Accuracy$mouseclick[is.na(Accuracy$mouseclick)] = "No"
+=======
+df = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
+colnames(df)[4] = "keytype"
+colnames(df)[5] = "mousemove"
+colnames(df)[6] = "mouseclick"
+colnames(df)[7] = "duration"
+df$keytype[is.na(df$keytype)] = 0
+df$mousemove[!is.na(df$mousemove)] = "Yes"
+df$mousemove[is.na(df$mousemove)] = "No"
+df$mouseclick[!is.na(df$mouseclick)] = "Yes"
+df$mouseclick[is.na(df$mouseclick)] = "No"
+>>>>>>> 247e653ddc5ef65a5fc5a8a81f4d20500b1abd9d
+
+#clean the data of worker info
+worker_profile = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/receipt_worker_profile.tsv') 
+academic_degree = worker_profile$academic_degree
+master_sign = str_detect(academic_degree, "Master")
+bachelor_sign = str_detect(academic_degree, "Bachelor")
+higher_sign = str_detect(academic_degree, "Higher")
+secondary_sign = str_detect(academic_degree, "Secondary")
+na_sign = !str_detect(academic_degree, " ")
+worker_profile$academic_degree[master_sign] = "master"
+worker_profile$academic_degree[(!master_sign)&(bachelor_sign)] = "bachelor"
+worker_profile$academic_degree[(!master_sign)&(!bachelor_sign)&(higher_sign)] = "highersecondary"
+worker_profile$academic_degree[(!master_sign)&(!bachelor_sign)&(!higher_sign)&(secondary_sign)] = "secondary"
+worker_profile$academic_degree[na_sign] = "na"
+worker_profile$academic_degree = factor(worker_profile$academic_degree, 
+                                           levels = c("master", "bachelor",
+                                                      "highersecondary", "secondary",
+                                                      "na"))
+worker_profile$gender = factor(worker_profile$gender, levels = c("Male", "Female"))
+str(worker_profile)
+worker_profile = worker_profile %>%
+  slice(-(90:93))
+present_time = Sys.time()
+present_time.poslt = as.POSIXlt(present_time, tz = "America/New_York")
+onboardtime = worker_profile$onbarded_date
+onboardtime.posix = as.POSIXct(onboardtime, format = "%Y-%m-%d %H:%M:%S")
+onboardtime.poslt = as.POSIXlt(onboardtime, tz = "America/New_York")
+onboard_duration = (present_time.poslt$year - onboardtime.poslt$year) *12 +
+  (present_time.poslt$mon - onboardtime.poslt$mon)
+worker_profile$onboard_duration = onboard_duration
+worker_profile$age = 2017 - worker_profile$birth_year
+worker_profile = worker_profile %>%
+  select(-onbarded_date, -birth_year)
+
+<<<<<<< HEAD
+#join worker_profile with Accuracy
+dt1 = inner_join(Accuracy, worker_profile)
+
+=======
+#join worker_profile with df
+dt1 = inner_join(df, worker_profile)
+dt1 = dt1 %>%
+  mutate(signkey = ())
+>>>>>>> 247e653ddc5ef65a5fc5a8a81f4d20500b1abd9d
+```
+
+
+#Full Operation Model
+```{r}
+dt2 = dt1 %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1)) 
+dt2$accuracy = as.factor(dt2$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index = sample(1:nrow(dt2), round(0.8*nrow(dt2)))
+train = dt2[index,]
+test = dt2[-index,]
+
+#build model on training data
+n = names(dt2)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf = randomForest(data = train,
+                      f, importance = TRUE)
+predict_train = predict(rf)
+train_table2 = table(train$accuracy, predict_train)
+kable(train_table2)
+train_accurate2 = sum(diag(train_table2))/nrow(train);train_accurate2
+
+#test 
+predict_test = predict(rf, newdata = test, type = "response")
+test_table2 = table(test$accuracy, predict_test)
+kable(test_table2)
+test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
+
+<<<<<<< HEAD
+#Calculate Information Gain
+matrix_train2=train_table2/sum(train_table2)
+Entro_Condi = -sum(matrix_train2[1,])*log2(sum(matrix_train2[1,]))-sum(matrix_train2[2,])*log2(sum(matrix_train2[2,]))
+Entro_Class = -sum(matrix_train2[,1])*log2(sum(matrix_train2[,1]))-sum(matrix_train2[,2])*log2(sum(matrix_train2[,2]))
+Entro_Matri = -sum(matrix_train2[1,1])*log2(sum(matrix_train2[1,1]))-sum(matrix_train2[1,2])*log2(sum(matrix_train2[1,2]))-sum(matrix_train2[2,1])*log2(sum(matrix_train2[2,1]))-sum(matrix_train2[2,2])*log2(sum(matrix_train2[2,2]))
+PIG_2_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_train
+
+matrix_test2=test_table2/sum(test_table2)
+Entro_Condi = -sum(matrix_test2[1,])*log2(sum(matrix_test2[1,]))-sum(matrix_test2[2,])*log2(sum(matrix_test2[2,]))
+Entro_Class = -sum(matrix_test2[,1])*log2(sum(matrix_test2[,1]))-sum(matrix_test2[,2])*log2(sum(matrix_test2[,2]))
+Entro_Matri = -sum(matrix_test2[1,1])*log2(sum(matrix_test2[1,1]))-sum(matrix_test2[1,2])*log2(sum(matrix_test2[1,2]))-sum(matrix_test2[2,1])*log2(sum(matrix_test2[2,1]))-sum(matrix_test2[2,2])*log2(sum(matrix_test2[2,2]))
+PIG_2_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_test
+=======
+#variable importance
+varImpPlot(rf2)
+
+>>>>>>> 247e653ddc5ef65a5fc5a8a81f4d20500b1abd9d
+```
+
+#10 Operation Model
+```{r}
+dt3 = dt1
+dt3$keep = 0
+task_id_index = unlist(distinct(dt3, task_id, .keep_all = FALSE))
+task_id_index = as.vector(task_id_index)
+
+for (i in task_id_index) {
+  index = which(dt3$task_id == i)
+  if (length(index) >= 10) 
+    {
+      dt3$keep[index[1:10]] = 1 
+    } 
+  else
+    {
+      dt3$keep[index] = 1
+    }
+}
+
+dt3_keep = dt3 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt3_keep = dt3_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt3_keep$accuracy = as.factor(dt3_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index3 = sample(1:nrow(dt3_keep), round(0.8*nrow(dt3_keep)))
+train3 = dt3_keep[index3,]
+test3 = dt3_keep[-index3,]
+
+#build model on training data
+n3 = names(dt3_keep)
+f3 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf3 = randomForest(data = train3,
+                      f3, importance = TRUE)
+predict_train3 = predict(rf3)
+train_table3 = table(train3$accuracy, predict_train3)
+kable(train_table3)
+train_accurate3 = sum(diag(train_table3))/nrow(train3);train_accurate3
+
+#test 
+predict_test3 = predict(rf3, newdata = test3, type = "response")
+test_table3 = table(test3$accuracy, predict_test3)
+kable(test_table3)
+test_accurate3 = sum(diag(test_table3))/nrow(test);test_accurate3
+
+#Calculate Information Gain
+matrix_train3=train_table3/sum(train_table3)
+Entro_Condi = -sum(matrix_train3[1,])*log2(sum(matrix_train3[1,]))-sum(matrix_train3[2,])*log2(sum(matrix_train3[2,]))
+Entro_Class = -sum(matrix_train3[,1])*log2(sum(matrix_train3[,1]))-sum(matrix_train3[,2])*log2(sum(matrix_train3[,2]))
+Entro_Matri = -sum(matrix_train3[1,1])*log2(sum(matrix_train3[1,1]))-sum(matrix_train3[1,2])*log2(sum(matrix_train3[1,2]))-sum(matrix_train3[2,1])*log2(sum(matrix_train3[2,1]))-sum(matrix_train3[2,2])*log2(sum(matrix_train3[2,2]))
+PIG_3_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_3_train
+
+matrix_test3=test_table3/sum(test_table3)
+Entro_Condi = -sum(matrix_test3[1,])*log2(sum(matrix_test3[1,]))-sum(matrix_test3[2,])*log2(sum(matrix_test3[2,]))
+Entro_Class = -sum(matrix_test3[,1])*log2(sum(matrix_test3[,1]))-sum(matrix_test3[,2])*log2(sum(matrix_test3[,2]))
+Entro_Matri = -sum(matrix_test3[1,1])*log2(sum(matrix_test3[1,1]))-sum(matrix_test3[1,2])*log2(sum(matrix_test3[1,2]))-sum(matrix_test3[2,1])*log2(sum(matrix_test3[2,1]))-sum(matrix_test3[2,2])*log2(sum(matrix_test3[2,2]))
+PIG_3_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_3_test
+```
+
+#20 Operation Model
+```{r}
+dt4 = dt1
+dt4$keep = 0
+
+for (i in task_id_index) {
+  index = which(dt4$task_id == i)
+  if (length(index) >= 20) 
+    {
+      dt4$keep[index[1:20]] = 1 
+    } 
+  else
+    {
+      dt4$keep[index] = 1
+    }
+}
+
+dt4_keep = dt4 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt4_keep = dt4_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt4_keep$accuracy = as.factor(dt4_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index4 = sample(1:nrow(dt4_keep), round(0.8*nrow(dt4_keep)))
+train4 = dt4_keep[index4,]
+test4 = dt4_keep[-index4,]
+
+#build model on training data
+n4 = names(dt4_keep)
+f4 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf4 = randomForest(data = train4,
+                      f4, importance = TRUE)
+predict_train4 = predict(rf4)
+train_table4 = table(train4$accuracy, predict_train4)
+kable(train_table4)
+train_accurate4 = sum(diag(train_table4))/nrow(train4);train_accurate4
+
+#test 
+predict_test4 = predict(rf4, newdata = test4, type = "response")
+test_table4 = table(test4$accuracy, predict_test4)
+kable(test_table4)
+test_accurate4 = sum(diag(test_table4))/nrow(test);test_accurate4
+
+#Calculate Information Gain
+matrix_train4=train_table4/sum(train_table4)
+Entro_Condi = -sum(matrix_train4[1,])*log2(sum(matrix_train4[1,]))-sum(matrix_train4[2,])*log2(sum(matrix_train4[2,]))
+Entro_Class = -sum(matrix_train4[,1])*log2(sum(matrix_train4[,1]))-sum(matrix_train4[,2])*log2(sum(matrix_train4[,2]))
+Entro_Matri = -sum(matrix_train4[1,1])*log2(sum(matrix_train4[1,1]))-sum(matrix_train4[1,2])*log2(sum(matrix_train4[1,2]))-sum(matrix_train4[2,1])*log2(sum(matrix_train4[2,1]))-sum(matrix_train4[2,2])*log2(sum(matrix_train4[2,2]))
+PIG_4_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_4_train
+
+matrix_test4=test_table4/sum(test_table4)
+Entro_Condi = -sum(matrix_test4[1,])*log2(sum(matrix_test4[1,]))-sum(matrix_test4[2,])*log2(sum(matrix_test4[2,]))
+Entro_Class = -sum(matrix_test4[,1])*log2(sum(matrix_test4[,1]))-sum(matrix_test4[,2])*log2(sum(matrix_test4[,2]))
+Entro_Matri = -sum(matrix_test4[1,1])*log2(sum(matrix_test4[1,1]))-sum(matrix_test4[1,2])*log2(sum(matrix_test4[1,2]))-sum(matrix_test4[2,1])*log2(sum(matrix_test4[2,1]))-sum(matrix_test4[2,2])*log2(sum(matrix_test4[2,2]))
+PIG_4_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_4_test
+```
+
+#30 Operation Model
+```{r}
+dt5 = dt1
+dt5$keep = 0
+
+for (i in task_id_index) {
+  index = which(dt5$task_id == i)
+  if (length(index) >= 30) 
+    {
+      dt5$keep[index[1:30]] = 1 
+    } 
+  else
+    {
+      dt5$keep[index] = 1
+    }
+}
+
+dt5_keep = dt5 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt5_keep = dt5_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt5_keep$accuracy = as.factor(dt5_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index5 = sample(1:nrow(dt5_keep), round(0.8*nrow(dt5_keep)))
+train5 = dt5_keep[index5,]
+test5 = dt5_keep[-index5,]
+
+#build model on training data
+n5 = names(dt5_keep)
+f5 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf5 = randomForest(data = train5,
+                      f5, importance = TRUE)
+predict_train5 = predict(rf5)
+train_table5 = table(train5$accuracy, predict_train5)
+kable(train_table5)
+train_accurate5 = sum(diag(train_table5))/nrow(train5);train_accurate5
+
+#test 
+predict_test5 = predict(rf5, newdata = test5, type = "response")
+test_table5 = table(test5$accuracy, predict_test5)
+kable(test_table5)
+test_accurate5 = sum(diag(test_table5))/nrow(test);test_accurate5
+
+#Calculate Information Gain
+matrix_train5=train_table5/sum(train_table5)
+Entro_Condi = -sum(matrix_train5[1,])*log2(sum(matrix_train5[1,]))-sum(matrix_train5[2,])*log2(sum(matrix_train5[2,]))
+Entro_Class = -sum(matrix_train5[,1])*log2(sum(matrix_train5[,1]))-sum(matrix_train5[,2])*log2(sum(matrix_train5[,2]))
+Entro_Matri = -sum(matrix_train5[1,1])*log2(sum(matrix_train5[1,1]))-sum(matrix_train5[1,2])*log2(sum(matrix_train5[1,2]))-sum(matrix_train5[2,1])*log2(sum(matrix_train5[2,1]))-sum(matrix_train5[2,2])*log2(sum(matrix_train5[2,2]))
+PIG_5_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_5_train
+
+matrix_test5=test_table5/sum(test_table5)
+Entro_Condi = -sum(matrix_test5[1,])*log2(sum(matrix_test5[1,]))-sum(matrix_test5[2,])*log2(sum(matrix_test5[2,]))
+Entro_Class = -sum(matrix_test5[,1])*log2(sum(matrix_test5[,1]))-sum(matrix_test5[,2])*log2(sum(matrix_test5[,2]))
+Entro_Matri = -sum(matrix_test5[1,1])*log2(sum(matrix_test5[1,1]))-sum(matrix_test5[1,2])*log2(sum(matrix_test5[1,2]))-sum(matrix_test5[2,1])*log2(sum(matrix_test5[2,1]))-sum(matrix_test5[2,2])*log2(sum(matrix_test5[2,2]))
+PIG_5_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_5_test
+```
+#40 operation model
+```{r}
+dt6 = dt1
+dt6$keep = 0
+
+for (i in task_id_index) {
+  index = which(dt6$task_id == i)
+  if (length(index) >= 40) 
+    {
+      dt6$keep[index[1:40]] = 1 
+    } 
+  else
+    {
+      dt6$keep[index] = 1
+    }
+}
+
+dt6_keep = dt6 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt6_keep = dt6_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt6_keep$accuracy = as.factor(dt6_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index6 = sample(1:nrow(dt6_keep), round(0.8*nrow(dt6_keep)))
+train6 = dt6_keep[index6,]
+test6 = dt6_keep[-index6,]
+
+#build model on training data
+n6 = names(dt6_keep)
+f6 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf6 = randomForest(data = train6,
+                      f6, importance = TRUE)
+predict_train6 = predict(rf6)
+train_table6 = table(train6$accuracy, predict_train6)
+kable(train_table6)
+train_accurate6 = sum(diag(train_table6))/nrow(train6);train_accurate6
+
+#test 
+predict_test6 = predict(rf6, newdata = test6, type = "response")
+test_table6 = table(test6$accuracy, predict_test6)
+kable(test_table6)
+test_accurate6 = sum(diag(test_table6))/nrow(test);test_accurate6
+
+#Calculate Information Gain
+matrix_train6=train_table6/sum(train_table6)
+Entro_Condi = -sum(matrix_train6[1,])*log2(sum(matrix_train6[1,]))-sum(matrix_train6[2,])*log2(sum(matrix_train6[2,]))
+Entro_Class = -sum(matrix_train6[,1])*log2(sum(matrix_train6[,1]))-sum(matrix_train6[,2])*log2(sum(matrix_train6[,2]))
+Entro_Matri = -sum(matrix_train6[1,1])*log2(sum(matrix_train6[1,1]))-sum(matrix_train6[1,2])*log2(sum(matrix_train6[1,2]))-sum(matrix_train6[2,1])*log2(sum(matrix_train6[2,1]))-sum(matrix_train6[2,2])*log2(sum(matrix_train6[2,2]))
+PIG_6_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_6_train
+
+matrix_test6=test_table6/sum(test_table6)
+Entro_Condi = -sum(matrix_test6[1,])*log2(sum(matrix_test6[1,]))-sum(matrix_test6[2,])*log2(sum(matrix_test6[2,]))
+Entro_Class = -sum(matrix_test6[,1])*log2(sum(matrix_test6[,1]))-sum(matrix_test6[,2])*log2(sum(matrix_test6[,2]))
+Entro_Matri = -sum(matrix_test6[1,1])*log2(sum(matrix_test6[1,1]))-sum(matrix_test6[1,2])*log2(sum(matrix_test6[1,2]))-sum(matrix_test6[2,1])*log2(sum(matrix_test6[2,1]))-sum(matrix_test6[2,2])*log2(sum(matrix_test6[2,2]))
+PIG_6_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_6_test
+```
+
+```{r}
+#summary on the dynamic model
+summary.dt = data.frame(c(train_accurate3, PIG_3_train, test_accurate3, PIG_3_test),
+           c(train_accurate4, PIG_4_train, test_accurate4, PIG_4_test),
+           c(train_accurate5, PIG_5_train, test_accurate5, PIG_5_test),
+           c(train_accurate6, PIG_6_train, test_accurate6, PIG_6_test),
+           c(train_accurate2, PIG_2_train, test_accurate2, PIG_2_test))
+
+colnames(summary.dt)[1] = "10 OP"
+colnames(summary.dt)[2] = "20 OP"
+colnames(summary.dt)[3] = "30 OP"
+colnames(summary.dt)[4] = "40 OP"
+colnames(summary.dt)[5] = "Full OP"
+rownames(summary.dt)[1] = "Training Accuracy"
+rownames(summary.dt)[2] = "Training PIG"
+rownames(summary.dt)[3] = "Testing Accuracy"
+rownames(summary.dt)[4] = "Testing PIG"
+summary.dt
+```
+
+#Rotate Full Operation Modelm, no longer useful
+```{r}
+rotate_full = data.frame(c(0,0,0,0))
+rownames(rotate_full)[1] = "Training Accuracy"
+rownames(rotate_full)[2] = "Training PIG"
+rownames(rotate_full)[3] = "Testing Accuracy"
+rownames(rotate_full)[4] = "Testing PIG"
+
+#rotate_full = data.frame(rotate_full,c(1,2,3,4))
+# rotate_full[,1] = data.frame(c(1,2,3,4))
+# rotate_full[,2] = data.frame(c(5,6,7,8))
+
+#Build a loop to evaluate the variables
+for(i in 15:16){
+ dt2_1 = dt2[,-i]
+ 
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index = sample(1:nrow(dt2_1), round(0.8*nrow(dt2_1)))
+train = dt2_1[index,]
+test = dt2_1[-index,]
+
+#build model on training data
+n = names(dt2_1)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf = randomForest(data = train,
+                      f, importance = TRUE)
+predict_train = predict(rf)
+train_table2_1 = table(train$accuracy, predict_train)
+kable(train_table2_1)
+train_accurate2_1 = sum(diag(train_table2_1))/nrow(train);train_accurate2_1
+
+#test 
+predict_test = predict(rf, newdata = test, type = "response")
+test_table2_1 = table(test$accuracy, predict_test)
+kable(test_table2_1)
+test_accurate2_1 = sum(diag(test_table2_1))/nrow(test);test_accurate2_1
+
+#Calculate Information Gain
+matrix_train2_1=train_table2_1/sum(train_table2_1)
+Entro_Condi = -sum(matrix_train2_1[1,])*log2(sum(matrix_train2_1[1,]))-sum(matrix_train2_1[2,])*log2(sum(matrix_train2_1[2,]))
+Entro_Class = -sum(matrix_train2_1[,1])*log2(sum(matrix_train2_1[,1]))-sum(matrix_train2_1[,2])*log2(sum(matrix_train2_1[,2]))
+Entro_Matri = -sum(matrix_train2_1[1,1])*log2(sum(matrix_train2_1[1,1]))-sum(matrix_train2_1[1,2])*log2(sum(matrix_train2_1[1,2]))-sum(matrix_train2_1[2,1])*log2(sum(matrix_train2_1[2,1]))-sum(matrix_train2_1[2,2])*log2(sum(matrix_train2_1[2,2]))
+PIG_2_1_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_1_train
+
+matrix_test2_1=test_table2_1/sum(test_table2_1)
+Entro_Condi = -sum(matrix_test2_1[1,])*log2(sum(matrix_test2_1[1,]))-sum(matrix_test2_1[2,])*log2(sum(matrix_test2_1[2,]))
+Entro_Class = -sum(matrix_test2_1[,1])*log2(sum(matrix_test2_1[,1]))-sum(matrix_test2_1[,2])*log2(sum(matrix_test2_1[,2]))
+Entro_Matri = -sum(matrix_test2_1[1,1])*log2(sum(matrix_test2_1[1,1]))-sum(matrix_test2_1[1,2])*log2(sum(matrix_test2_1[1,2]))-sum(matrix_test2_1[2,1])*log2(sum(matrix_test2_1[2,1]))-sum(matrix_test2_1[2,2])*log2(sum(matrix_test2_1[2,2]))
+PIG_2_1_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_2_1_test
+
+#Record the outcome
+rotate_full[,i] = data.frame(c(train_accurate2_1,PIG_2_1_train,test_accurate2_1,PIG_2_1_test))
+}
+
+rotate_full
+```
