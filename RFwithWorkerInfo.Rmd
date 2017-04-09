@@ -1,12 +1,8 @@
 ---
-title: "R Notebook"
+title: "Random Forest with Worker Info"
 output: html_notebook
 ---
 
----
-title: "R Notebook"
-output: html_notebook
----
 ```{r, message=FALSE}
 library(data.table)
 library(ggplot2)
@@ -838,16 +834,17 @@ rownames(FN_EL6)[4] = "General Omniscient - Test"
 FN_EL6
 #0+219.8/0+176.0
 #6.2+39.9/5.6+29.7
+FN_EL6[2,3]
 ```
 
 
 #summary of outcomes with different trigger
 ```{r}
-summary.dt = data.frame(c(train_accurate3, PIG_3_train, test_accurate3, PIG_3_test),
-           c(train_accurate4, PIG_4_train, test_accurate4, PIG_4_test),
-           c(train_accurate5, PIG_5_train, test_accurate5, PIG_5_test),
-           c(train_accurate6, PIG_6_train, test_accurate6, PIG_6_test),
-           c(train_accurate2, PIG_2_train, test_accurate2, PIG_2_test))
+summary.dt = data.frame(c(train_accurate3,PIG_3_train, FN_EL3[1,2], test_accurate3, PIG_3_test, FN_EL3[2,2]),
+           c(train_accurate4, PIG_4_train, FN_EL4[1,2], test_accurate4, PIG_4_test, FN_EL4[2,2]),
+           c(train_accurate5, PIG_5_train, FN_EL5[1,2], test_accurate5, PIG_5_test, FN_EL5[2,2]),
+           c(train_accurate6, PIG_6_train, FN_EL6[1,2], test_accurate6, PIG_6_test, FN_EL6[2,2]),
+           c(train_accurate2, PIG_2_train, FN_EL2[1,2], test_accurate2, PIG_2_test, FN_EL2[2,2]))
 
 colnames(summary.dt)[1] = "10 OP"
 colnames(summary.dt)[2] = "20 OP"
@@ -856,7 +853,9 @@ colnames(summary.dt)[4] = "40 OP"
 colnames(summary.dt)[5] = "Full OP"
 rownames(summary.dt)[1] = "Training Accuracy"
 rownames(summary.dt)[2] = "Training PIG"
-rownames(summary.dt)[3] = "Testing Accuracy"
-rownames(summary.dt)[4] = "Testing PIG"
+rownames(summary.dt)[3] = "Training - FN's Equivelent Loss (Time Cost)"
+rownames(summary.dt)[4] = "Testing Accuracy"
+rownames(summary.dt)[5] = "Testing PIG"
+rownames(summary.dt)[6] = "Testing - FN's Equivelent Loss (Time Cost)"
 summary.dt
 ```
