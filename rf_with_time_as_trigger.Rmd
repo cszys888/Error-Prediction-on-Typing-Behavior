@@ -1,0 +1,357 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r, message=FALSE}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+require(bit64)
+library(randomForest)
+library(stringr)
+library(lubridate)
+```
+
+```{r}
+df = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
+colnames(df)[4] = "keytype"
+colnames(df)[5] = "mousemove"
+colnames(df)[6] = "mouseclick"
+colnames(df)[7] = "duration"
+df$keytype[is.na(df$keytype)] = 0
+df$mousemove[!is.na(df$mousemove)] = "Yes"
+df$mousemove[is.na(df$mousemove)] = "No"
+df$mouseclick[!is.na(df$mouseclick)] = "Yes"
+df$mouseclick[is.na(df$mouseclick)] = "No"
+
+#clean the data of worker info
+worker_profile = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/receipt_worker_profile.tsv') 
+academic_degree = worker_profile$academic_degree
+master_sign = str_detect(academic_degree, "Master")
+bachelor_sign = str_detect(academic_degree, "Bachelor")
+higher_sign = str_detect(academic_degree, "Higher")
+secondary_sign = str_detect(academic_degree, "Secondary")
+na_sign = !str_detect(academic_degree, " ")
+worker_profile$academic_degree[master_sign] = "master"
+worker_profile$academic_degree[(!master_sign)&(bachelor_sign)] = "bachelor"
+worker_profile$academic_degree[(!master_sign)&(!bachelor_sign)&(higher_sign)] = "highersecondary"
+worker_profile$academic_degree[(!master_sign)&(!bachelor_sign)&(!higher_sign)&(secondary_sign)] = "secondary"
+worker_profile$academic_degree[na_sign] = "na"
+worker_profile$academic_degree = factor(worker_profile$academic_degree, 
+                                           levels = c("master", "bachelor",
+                                                      "highersecondary", "secondary",
+                                                      "na"))
+worker_profile$gender = factor(worker_profile$gender, levels = c("Male", "Female"))
+str(worker_profile)
+worker_profile = worker_profile %>%
+  slice(-(90:93))
+present_time = Sys.time()
+present_time.poslt = as.POSIXlt(present_time, tz = "America/New_York")
+onboardtime = worker_profile$onbarded_date
+onboardtime.posix = as.POSIXct(onboardtime, format = "%Y-%m-%d %H:%M:%S")
+onboardtime.poslt = as.POSIXlt(onboardtime, tz = "America/New_York")
+onboard_duration = (present_time.poslt$year - onboardtime.poslt$year) *12 +
+  (present_time.poslt$mon - onboardtime.poslt$mon)
+worker_profile$onboard_duration = onboard_duration
+worker_profile$age = 2017 - worker_profile$birth_year
+worker_profile = worker_profile %>%
+  select(-onbarded_date, -birth_year)
+
+#join worker_profile with df
+dt1 = inner_join(df, worker_profile)
+
+#calculate the average duration for one task
+duration_stat = dt1 %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1])
+summary(duration_stat)
+
+#calculate the relative time of each operation
+dt1 = dt1 %>%
+  group_by(task_id) %>%
+  mutate(rela_time = (timestamp - timestamp[1])/1000)
+
+#add the condition trasferring indicator
+dt1$keytype_new = 4
+dt1$keytype_new[2:nrow(dt1)] = dt1$keytype[1:nrow(dt1)-1]
+dt1$mousemove_new = "No"
+dt1$mousemove_new[2:nrow(dt1)] = dt1$mousemove[1:nrow(dt1)-1]
+dt1$mouseclick_new = "No"
+dt1$mouseclick_new[2:nrow(dt1)] = dt1$mouseclick[1:nrow(dt1)-1]
+dt1 = dt1 %>%
+  group_by(task_id) %>%
+  mutate(key_ind = ifelse(keytype == keytype_new, 0, 1),
+         mouseclick_ind = ifelse(mouseclick == mouseclick_new, 0, 1),
+         mousemove_ind = ifelse(mousemove == mousemove_new, 0, 1))
+```
+
+#Full Operation Model
+```{r}
+dt2 = dt1 %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1],
+            count_key = sum(key_ind[2:n()]),
+            count_move = sum(mousemove_ind[2:n()]),
+            count_click = sum(mouseclick_ind[2:n()]))%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1)) 
+dt2$accuracy = as.factor(dt2$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index = sample(1:nrow(dt2), round(0.5*nrow(dt2)))
+train = dt2[index,]
+test = dt2[-index,]
+
+#build model on training data
+n = names(dt2)
+f = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf2 = randomForest(data = train, f, importance = TRUE)
+predict_train = predict(rf2)
+train_table2 = table(train$accuracy, predict_train)
+kable(train_table2)
+train_accurate2 = sum(diag(train_table2))/nrow(train);train_accurate2
+
+#test 
+predict_test = predict(rf2, newdata = test, type = "response")
+test_table2 = table(test$accuracy, predict_test)
+kable(test_table2)
+test_accurate2 = sum(diag(test_table2))/nrow(test);test_accurate2
+
+#variable importance
+varImpPlot(rf2)
+
+```
+
+#10s
+```{r}
+dt3 = dt1
+
+dt3 = dt3 %>%
+  mutate(keep = ifelse(rela_time <= 10, 1, 0))
+
+dt3_keep = dt3 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt3_keep = dt3_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/total_op,
+            count_mouseclick = sum(mouseclick == "Yes")/total_op,
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt3_keep$accuracy = as.factor(dt3_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index3 = sample(1:nrow(dt3_keep), round(0.5*nrow(dt3_keep)))
+train3 = dt3_keep[index3,]
+test3 = dt3_keep[-index3,]
+
+#build model on training data
+n3 = names(dt3_keep)
+f3 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf3 = randomForest(data = train3,
+                      f3, importance = TRUE)
+predict_train3 = predict(rf3)
+train_table3 = table(train3$accuracy, predict_train3)
+kable(train_table3)
+train_accurate3 = sum(diag(train_table3))/nrow(train3);train_accurate3
+
+#test 
+predict_test3 = predict(rf3, newdata = test3, type = "response")
+test_table3 = table(test3$accuracy, predict_test3)
+kable(test_table3)
+test_accurate3 = sum(diag(test_table3))/nrow(test);test_accurate3
+```
+
+#20s
+```{r}
+dt4 = dt1
+
+dt4 = dt4 %>%
+  mutate(keep = ifelse(rela_time <= 20, 1, 0))
+
+dt4_keep = dt4 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt4_keep = dt4_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt4_keep$accuracy = as.factor(dt4_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index4 = sample(1:nrow(dt4_keep), round(0.5*nrow(dt4_keep)))
+train4 = dt4_keep[index4,]
+test4 = dt4_keep[-index4,]
+
+#build model on training data
+n4 = names(dt4_keep)
+f4 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf4 = randomForest(data = train4,
+                      f4, importance = TRUE)
+predict_train4 = predict(rf4)
+train_table4 = table(train4$accuracy, predict_train4)
+kable(train_table4)
+train_accurate4 = sum(diag(train_table4))/nrow(train4);train_accurate4
+
+#test 
+predict_test4 = predict(rf4, newdata = test4, type = "response")
+test_table4 = table(test4$accuracy, predict_test4)
+kable(test_table4)
+test_accurate4 = sum(diag(test_table4))/nrow(test);test_accurate4
+```
+
+#30s
+```{r}
+dt5 = dt1
+
+dt5 = dt5 %>%
+  mutate(keep = ifelse(rela_time <= 30, 1, 0))
+
+dt5_keep = dt5 %>%
+  filter(keep == 1) %>%
+  select(-keep)
+
+dt5_keep = dt5_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1],
+            total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
+            count_mousemove = sum(mousemove == "Yes")/n(),
+            count_mouseclick = sum(mouseclick == "Yes")/n(),
+            key1 = sum(keytype == 1)/total_op,
+            key2 = sum(keytype == 2)/total_op,
+            key3 = sum(keytype == 3)/total_op,
+            key4 = sum(keytype == 4)/total_op,
+            key5 = sum(keytype == 5)/total_op,
+            key6 = sum(keytype == 6)/total_op,
+            key7 = sum(keytype == 7)/total_op,
+            key8 = sum(keytype == 8)/total_op,
+            key9 = sum(keytype == 9)/total_op,
+            key10 = sum(keytype == 10)/total_op,
+            key11 = sum(keytype == 11)/total_op,
+            key12 = sum(keytype == 12)/total_op,
+            accuracy = accuracy[1],
+            worker_id = worker_id[1],
+            gender = gender[1],
+            academic_degree = academic_degree[1],
+            onboard_duration = onboard_duration[1],
+            age = age[1])%>%
+  select(-task_id, -worker_id, -total_op) %>%
+  mutate(accuracy = (accuracy == 1))
+dt5_keep$accuracy = as.factor(dt5_keep$accuracy)
+
+#randomforest binary classification
+#divide data into training and testing
+set.seed(2000)
+index5 = sample(1:nrow(dt5_keep), round(0.5*nrow(dt5_keep)))
+train5 = dt5_keep[index5,]
+test5 = dt5_keep[-index5,]
+
+#build model on training data
+n5 = names(dt5_keep)
+f5 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+rf5 = randomForest(data = train5,
+                      f5, importance = TRUE)
+predict_train5 = predict(rf5)
+train_table5 = table(train5$accuracy, predict_train5)
+kable(train_table5)
+train_accurate5 = sum(diag(train_table5))/nrow(train5);train_accurate5
+
+#test 
+predict_test5 = predict(rf5, newdata = test5, type = "response")
+test_table5 = table(test5$accuracy, predict_test5)
+kable(test_table5)
+test_accurate5 = sum(diag(test_table5))/nrow(test);test_accurate5
+```
+
+
+```{r}
+#summary on the dynamic model
+summary.dt = data.frame(c(train_accurate3, test_accurate3),
+           c(train_accurate4, test_accurate4),
+           c(train_accurate5, test_accurate5),
+           c(train_accurate2, test_accurate2))
+colnames(summary.dt)[1] = "10s"
+colnames(summary.dt)[2] = "20s"
+colnames(summary.dt)[3] = "30s"
+colnames(summary.dt)[4] = "Full OP"
+rownames(summary.dt)[1] = "training data"
+rownames(summary.dt)[2] = "testing data"
+summary.dt
+```
