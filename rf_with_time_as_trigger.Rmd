@@ -19,6 +19,7 @@ library(lubridate)
 ```
 
 ```{r}
+#Open and process original data set
 df = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/CloudFactory_DataSet_Accuracy_Prediction.tsv') 
 colnames(df)[4] = "keytype"
 colnames(df)[5] = "mousemove"
@@ -30,7 +31,9 @@ df$mousemove[is.na(df$mousemove)] = "No"
 df$mouseclick[!is.na(df$mouseclick)] = "Yes"
 df$mouseclick[is.na(df$mouseclick)] = "No"
 
-#clean the data of worker info
+#------------------------------------------------------------------------------------------
+#Open and process additional info
+  #Reformat the education and gender info
 worker_profile = fread('https://raw.githubusercontent.com/cszys888/BEGGER-DATA---Team-1/master/receipt_worker_profile.tsv') 
 academic_degree = worker_profile$academic_degree
 master_sign = str_detect(academic_degree, "Master")
@@ -66,6 +69,7 @@ worker_profile = worker_profile %>%
 #join worker_profile with df
 dt1 = inner_join(df, worker_profile)
 
+#------------------------------------------------------------------------------------------
 #calculate the average duration for one task
 duration_stat = dt1 %>%
   group_by(task_id) %>%
@@ -151,7 +155,92 @@ varImpPlot(rf2)
 
 ```
 
-#10s
+#Evaluate the Full Model (Make Sure to Run "Full Operation Model" Chunk First)
+```{r}
+#Calculate Information Gain
+matrix_train2=train_table2/sum(train_table2)
+Entro_Condi = -sum(matrix_train2[1,])*log2(sum(matrix_train2[1,])) - sum(matrix_train2[2,])*log2(sum(matrix_train2[2,]))
+Entro_Class = -sum(matrix_train2[,1])*log2(sum(matrix_train2[,1])) - sum(matrix_train2[,2])*log2(sum(matrix_train2[,2]))
+Entro_Matri = -sum(matrix_train2[1,1])*log2(sum(matrix_train2[1,1])) - sum(matrix_train2[1,2])*log2(sum(matrix_train2[1,2])) - sum(matrix_train2[2,1])*log2(sum(matrix_train2[2,1])) - sum(matrix_train2[2,2])*log2(sum(matrix_train2[2,2]))
+PIG_2_train = (Entro_Condi + Entro_Class - Entro_Matri)/Entro_Condi;PIG_2_train
+  #---↑Train---↓Test---
+matrix_test2=test_table2/sum(test_table2)
+Entro_Condi = -sum(matrix_test2[1,])*log2(sum(matrix_test2[1,])) - sum(matrix_test2[2,])*log2(sum(matrix_test2[2,]))
+Entro_Class = -sum(matrix_test2[,1])*log2(sum(matrix_test2[,1])) - sum(matrix_test2[,2])*log2(sum(matrix_test2[,2]))
+Entro_Matri = -sum(matrix_test2[1,1])*log2(sum(matrix_test2[1,1])) - sum(matrix_test2[1,2])*log2(sum(matrix_test2[1,2])) - sum(matrix_test2[2,1])*log2(sum(matrix_test2[2,1])) - sum(matrix_test2[2,2])*log2(sum(matrix_test2[2,2]))
+PIG_2_test = (Entro_Condi + Entro_Class - Entro_Matri)/Entro_Condi;PIG_2_test
+
+#------------------------------------------------------------------------------------------
+#Analyze added value
+train_detail2 = data.frame(train$accuracy, predict_train,train$duration)
+test_detail2 = data.frame(test$accuracy, predict_test,test$duration)
+colnames(train_detail2)[3] = "Task_Duration"
+colnames(test_detail2)[3] = "Task_Duration"
+
+  #Create confision matrix lable and time cost
+    #Train Set
+train_detail2 = train_detail2 %>% 
+    #To lable confusion matrix
+  mutate(TN = ((train.accuracy=="TRUE")*(predict_train=="TRUE")),
+         FN = ((train.accuracy=="FALSE")*(predict_train=="TRUE")),
+         FP = ((train.accuracy=="TRUE")*(predict_train=="FALSE")),
+         TP = ((train.accuracy=="FALSE")*(predict_train=="FALSE"))) %>%
+  select(-train.accuracy,-predict_train) %>%
+    #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN)+2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN)+1*Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = 2*Task_Duration*(TP+FP)+Task_Duration*(TN+FN))
+
+    #Test Set
+test_detail2 = test_detail2 %>% 
+      #To lable confusion matrix
+  mutate(TN = ((test.accuracy=="TRUE")*(predict_test=="TRUE")),
+         FN = ((test.accuracy=="FALSE")*(predict_test=="TRUE")),
+         FP = ((test.accuracy=="TRUE")*(predict_test=="FALSE")),
+         TP = ((test.accuracy=="FALSE")*(predict_test=="FALSE"))) %>%
+  select(-test.accuracy,-predict_test) %>%
+      #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN)+2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN)+1*Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = 2*Task_Duration*(TP+FP)+Task_Duration*(TN+FN))
+
+  #Time consumption PER EVENT when it is (double typing)/(Somehow omniscient)/(Using predictive model)
+  #Caution: Variables in this session share names for in different chunk (As they are just interim variable, so I do not want to bother...)
+    #Train Set
+Double_Typing_Cost_a = mean(train_detail2$Cost_Benchmark);#Double_Typing_Cost_a
+Omniscient_Cost_a = mean(train_detail2$Cost_Omniscient);#Omniscient_Cost_a
+Model_Cost1_a = mean(train_detail2$Cost_Model_ExcludingM);#Model_Cost1_a
+M_counts_a = mean(train_detail2$FN)
+    #Test Set
+Double_Typing_Cost_e = mean(test_detail2$Cost_Benchmark);#Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail2$Cost_Omniscient);#Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail2$Cost_Model_ExcludingM);#Model_Cost1_e
+M_counts_e = mean(test_detail2$FN)
+
+#Summarise value added: FN_EL short for "False Negative Equivelent Loss"
+FN_EL2 = data.frame(c(train_accurate2*100,PIG_2_train*100,test_accurate2*100,PIG_2_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
+
+colnames(FN_EL2)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL2)[2] = "  "
+colnames(FN_EL2)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL2)[4] = "Time Consumption/Event"
+rownames(FN_EL2)[1] = "Train"
+rownames(FN_EL2)[2] = "  "
+rownames(FN_EL2)[3] = "Test"
+rownames(FN_EL2)[4] = "    "
+FN_EL2
+#0+196.5/0+173.9
+#6.6+4.3/6.5+2.4
+```
+
+
+
+
+
+#+10s
 ```{r}
 dt3 = dt1
 
@@ -214,7 +303,7 @@ kable(test_table3)
 test_accurate3 = sum(diag(test_table3))/nrow(test);test_accurate3
 ```
 
-#20s
+#+20s
 ```{r}
 dt4 = dt1
 
@@ -277,7 +366,7 @@ kable(test_table4)
 test_accurate4 = sum(diag(test_table4))/nrow(test);test_accurate4
 ```
 
-#30s
+#+30s
 ```{r}
 dt5 = dt1
 
