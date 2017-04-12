@@ -131,7 +131,7 @@ dt2$accuracy = as.factor(dt2$accuracy)
 #randomforest binary classification
   #divide data into training and testing
 set.seed(2000)
-index = sample(1:nrow(dt2), round(0.8*nrow(dt2)))
+index = sample(1:nrow(dt2), round(0.5*nrow(dt2)))
 train = dt2[index,]
 test = dt2[-index,]
 
@@ -207,30 +207,26 @@ Omniscient_Cost_a = mean(train_detail2$Cost_Omniscient);Omniscient_Cost_a
 Model_Cost1_a = mean(train_detail2$Cost_Model_ExcludingM);Model_Cost1_a
 M_counts_a = mean(train_detail2$FN)
     #Test Set
-Double_Typing_Cost_e = mean(test_detail2$Cost_Benchmark);Double_Typing_Cost
-Omniscient_Cost_e = mean(test_detail2$Cost_Omniscient);Omniscient_Cost
-Model_Cost1_e = mean(test_detail2$Cost_Model_ExcludingM);Model_Cost1
+Double_Typing_Cost_e = mean(test_detail2$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail2$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail2$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail2$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
-FN_EL2 = data.frame(c(0,0,1/M_counts_a,1/M_counts_e),
-                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
-                      ((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e))) %>%
-  round(1)
+FN_EL2 = data.frame(c(train_accurate2*100,PIG_2_train*100,test_accurate2*100,PIG_2_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
 
-colnames(FN_EL2)[1] = "Cost to Be Omniscient/Event"
-colnames(FN_EL2)[2] = "Time Consumption/Event"
-rownames(FN_EL2)[1] = "Double Typing - Train"
-rownames(FN_EL2)[2] = "Double Typing - Test"
-rownames(FN_EL2)[3] = "General Omniscient - Train"
-rownames(FN_EL2)[4] = "General Omniscient - Test"
+colnames(FN_EL2)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL2)[2] = "  "
+colnames(FN_EL2)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL2)[4] = "Time Consumption/Event"
+rownames(FN_EL2)[1] = "Train"
+rownames(FN_EL2)[2] = "  "
+rownames(FN_EL2)[3] = "Test"
+rownames(FN_EL2)[4] = "    "
 FN_EL2
-#0+196.5/0+173.9
-#6.6+4.3/6.5+2.4
-
-#After Adding two parameters
-#0+193/0+179.1
-#6.4+6.3/6.7+3.1
 ```
 
 
@@ -375,17 +371,19 @@ Model_Cost1_e = mean(test_detail3$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail3$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
-FN_EL3 = data.frame(c(0,0,1/M_counts_a,1/M_counts_e),
-                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
-                      ((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e))) %>%  
-  round(1)
+FN_EL3 = data.frame(c(train_accurate3*100,PIG_3_train*100,test_accurate3*100,PIG_3_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
 
-colnames(FN_EL3)[1] = "Cost to Be Omniscient/Event"
-colnames(FN_EL3)[2] = "Time Consumption/Event"
-rownames(FN_EL3)[1] = "Double Typing - Train"
-rownames(FN_EL3)[2] = "Double Typing - Test"
-rownames(FN_EL3)[3] = "General Omniscient - Train"
-rownames(FN_EL3)[4] = "General Omniscient - Test"
+colnames(FN_EL3)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL3)[2] = "  "
+colnames(FN_EL3)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL3)[4] = "Time Consumption/Event"
+rownames(FN_EL3)[1] = "Train"
+rownames(FN_EL3)[2] = "  "
+rownames(FN_EL3)[3] = "Test"
+rownames(FN_EL3)[4] = "    "
 FN_EL3
 #0+206/0+201
 #5.1+57/5.6+54.6
@@ -532,17 +530,19 @@ Model_Cost1_e = mean(test_detail4$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail4$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
-FN_EL4 = data.frame(c(0,0,1/M_counts_a,1/M_counts_e),
-                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
-                      ((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e))) %>%  
-  round(1)
+FN_EL4 = data.frame(c(train_accurate4*100,PIG_4_train*100,test_accurate4*100,PIG_4_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
 
-colnames(FN_EL4)[1] = "Cost to Be Omniscient/Event"
-colnames(FN_EL4)[2] = "Time Consumption/Event"
-rownames(FN_EL4)[1] = "Double Typing - Train"
-rownames(FN_EL4)[2] = "Double Typing - Test"
-rownames(FN_EL4)[3] = "General Omniscient - Train"
-rownames(FN_EL4)[4] = "General Omniscient - Test"
+colnames(FN_EL4)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL4)[2] = "  "
+colnames(FN_EL4)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL4)[4] = "Time Consumption/Event"
+rownames(FN_EL4)[1] = "Train"
+rownames(FN_EL4)[2] = "  "
+rownames(FN_EL4)[3] = "Test"
+rownames(FN_EL4)[4] = "    "
 FN_EL4
 #0+225/0+193
 #5.9+54.8/5.7+44.7
@@ -688,17 +688,19 @@ Model_Cost1_e = mean(test_detail5$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail5$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
-FN_EL5 = data.frame(c(0,0,1/M_counts_a,1/M_counts_e),
-                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
-                      ((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e))) %>%  
-  round(1)
+FN_EL5 = data.frame(c(train_accurate5*100,PIG_5_train*100,test_accurate5*100,PIG_5_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
 
-colnames(FN_EL5)[1] = "Cost to Be Omniscient/Event"
-colnames(FN_EL5)[2] = "Time Consumption/Event"
-rownames(FN_EL5)[1] = "Double Typing - Train"
-rownames(FN_EL5)[2] = "Double Typing - Test"
-rownames(FN_EL5)[3] = "General Omniscient - Train"
-rownames(FN_EL5)[4] = "General Omniscient - Test"
+colnames(FN_EL5)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL5)[2] = "  "
+colnames(FN_EL5)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL5)[4] = "Time Consumption/Event"
+rownames(FN_EL5)[1] = "Train"
+rownames(FN_EL5)[2] = "  "
+rownames(FN_EL5)[3] = "Test"
+rownames(FN_EL5)[4] = "    "
 FN_EL5
 #0+226.9/0+202.0
 #6.2+47.4/6.2+40.2
@@ -838,23 +840,25 @@ Omniscient_Cost_a = mean(train_detail6$Cost_Omniscient);Omniscient_Cost_a
 Model_Cost1_a = mean(train_detail6$Cost_Model_ExcludingM);Model_Cost1_a
 M_counts_a = mean(train_detail6$FN)
     #Test Set
-Double_Typing_Cost_e = mean(test_detail6$Cost_Benchmark);Double_Typing_Cost
-Omniscient_Cost_e = mean(test_detail6$Cost_Omniscient);Omniscient_Cost
-Model_Cost1_e = mean(test_detail6$Cost_Model_ExcludingM);Model_Cost1
+Double_Typing_Cost_e = mean(test_detail6$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail6$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail6$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail6$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
-FN_EL6 = data.frame(c(0,0,1/M_counts_a,1/M_counts_e),
-                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
-                      ((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e))) %>%  
-  round(1)
+FN_EL6 = data.frame(c(train_accurate6*100,PIG_6_train*100,test_accurate6*100,PIG_6_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
 
-colnames(FN_EL6)[1] = "Cost to Be Omniscient/Event"
-colnames(FN_EL6)[2] = "Time Consumption/Event"
-rownames(FN_EL6)[1] = "Double Typing - Train"
-rownames(FN_EL6)[2] = "Double Typing - Test"
-rownames(FN_EL6)[3] = "General Omniscient - Train"
-rownames(FN_EL6)[4] = "General Omniscient - Test"
+colnames(FN_EL6)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL6)[2] = "  "
+colnames(FN_EL6)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL6)[4] = "Time Consumption/Event"
+rownames(FN_EL6)[1] = "Train"
+rownames(FN_EL6)[2] = "  "
+rownames(FN_EL6)[3] = "Test"
+rownames(FN_EL6)[4] = "    "
 FN_EL6
 #0+219.8/0+176.0
 #6.2+39.9/5.6+29.7
