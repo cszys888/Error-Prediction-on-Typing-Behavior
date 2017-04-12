@@ -369,9 +369,9 @@ Omniscient_Cost_a = mean(train_detail3$Cost_Omniscient);Omniscient_Cost_a
 Model_Cost1_a = mean(train_detail3$Cost_Model_ExcludingM);Model_Cost1_a
 M_counts_a = mean(train_detail3$FN)
     #Test Set
-Double_Typing_Cost_e = mean(test_detail3$Cost_Benchmark);Double_Typing_Cost
-Omniscient_Cost_e = mean(test_detail3$Cost_Omniscient);Omniscient_Cost
-Model_Cost1_e = mean(test_detail3$Cost_Model_ExcludingM);Model_Cost1
+Double_Typing_Cost_e = mean(test_detail3$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail3$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail3$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail3$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
@@ -526,9 +526,9 @@ Omniscient_Cost_a = mean(train_detail4$Cost_Omniscient);Omniscient_Cost_a
 Model_Cost1_a = mean(train_detail4$Cost_Model_ExcludingM);Model_Cost1_a
 M_counts_a = mean(train_detail4$FN)
     #Test Set
-Double_Typing_Cost_e = mean(test_detail4$Cost_Benchmark);Double_Typing_Cost
-Omniscient_Cost_e = mean(test_detail4$Cost_Omniscient);Omniscient_Cost
-Model_Cost1_e = mean(test_detail4$Cost_Model_ExcludingM);Model_Cost1
+Double_Typing_Cost_e = mean(test_detail4$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail4$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail4$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail4$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"
@@ -682,9 +682,9 @@ Omniscient_Cost_a = mean(train_detail5$Cost_Omniscient);Omniscient_Cost_a
 Model_Cost1_a = mean(train_detail5$Cost_Model_ExcludingM);Model_Cost1_a
 M_counts_a = mean(train_detail5$FN)
     #Test Set
-Double_Typing_Cost_e = mean(test_detail5$Cost_Benchmark);Double_Typing_Cost
-Omniscient_Cost_e = mean(test_detail5$Cost_Omniscient);Omniscient_Cost
-Model_Cost1_e = mean(test_detail5$Cost_Model_ExcludingM);Model_Cost1
+Double_Typing_Cost_e = mean(test_detail5$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail5$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail5$Cost_Model_ExcludingM);Model_Cost1_e
 M_counts_e = mean(test_detail5$FN)
 
 #Summarise value added: FN_EL short for "False Negative Equivelent Loss"

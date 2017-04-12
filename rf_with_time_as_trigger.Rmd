@@ -3,10 +3,6 @@ title: "R Notebook"
 output: html_notebook
 ---
 
----
-title: "R Notebook"
-output: html_notebook
----
 ```{r, message=FALSE}
 library(data.table)
 library(ggplot2)
@@ -94,6 +90,8 @@ dt1 = dt1 %>%
          mouseclick_ind = ifelse(mouseclick == mouseclick_new, 0, 1),
          mousemove_ind = ifelse(mousemove == mousemove_new, 0, 1))
 ```
+
+
 
 #Full Operation Model
 ```{r}
@@ -232,11 +230,9 @@ rownames(FN_EL2)[2] = "  "
 rownames(FN_EL2)[3] = "Test"
 rownames(FN_EL2)[4] = "    "
 FN_EL2
-#0+196.5/0+173.9
-#6.6+4.3/6.5+2.4
+#194.7/173.7
+#6.6+1.6/6.3+1.5
 ```
-
-
 
 
 
@@ -251,9 +247,15 @@ dt3_keep = dt3 %>%
   filter(keep == 1) %>%
   select(-keep)
 
+ #This ia a variable that need to be updated with a different trigger because I do not want to bother naming them seerately
+Duration_full = dt3_keep %>%
+  group_by(task_id) %>%
+  summarise(duration = duration[1]) 
+
 dt3_keep = dt3_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
+            duration_to_now = max(rela_time),
             total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
             count_mousemove = sum(mousemove == "Yes")/total_op,
             count_mouseclick = sum(mouseclick == "Yes")/total_op,
@@ -288,7 +290,7 @@ test3 = dt3_keep[-index3,]
 
 #build model on training data
 n3 = names(dt3_keep)
-f3 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f3 = as.formula(paste("accuracy~", paste(n3[!n3 %in% "accuracy"], collapse = "+")))
 rf3 = randomForest(data = train3,
                       f3, importance = TRUE)
 predict_train3 = predict(rf3)
@@ -302,6 +304,91 @@ test_table3 = table(test3$accuracy, predict_test3)
 kable(test_table3)
 test_accurate3 = sum(diag(test_table3))/nrow(test);test_accurate3
 ```
+
+#Evaluate the +10s Model (Make Sure to Run "+10s" Chunk First)
+```{r}
+#Calculate Information Gain
+matrix_train3=train_table3/sum(train_table3)
+Entro_Condi = -sum(matrix_train3[1,])*log2(sum(matrix_train3[1,])) - sum(matrix_train3[2,])*log2(sum(matrix_train3[2,]))
+Entro_Class = -sum(matrix_train3[,1])*log2(sum(matrix_train3[,1])) - sum(matrix_train3[,2])*log2(sum(matrix_train3[,2]))
+Entro_Matri = -sum(matrix_train3[1,1])*log2(sum(matrix_train3[1,1])) - sum(matrix_train3[1,2])*log2(sum(matrix_train3[1,2])) - sum(matrix_train3[2,1])*log2(sum(matrix_train3[2,1])) - sum(matrix_train3[2,2])*log2(sum(matrix_train3[2,2]))
+PIG_3_train = (Entro_Condi + Entro_Class-Entro_Matri)/Entro_Condi;PIG_3_train
+  #---↑Train---↓Test---
+matrix_test3=test_table3/sum(test_table3)
+Entro_Condi = -sum(matrix_test3[1,])*log2(sum(matrix_test3[1,])) - sum(matrix_test3[2,])*log2(sum(matrix_test3[2,]))
+Entro_Class = -sum(matrix_test3[,1])*log2(sum(matrix_test3[,1])) - sum(matrix_test3[,2])*log2(sum(matrix_test3[,2]))
+Entro_Matri = -sum(matrix_test3[1,1])*log2(sum(matrix_test3[1,1])) - sum(matrix_test3[1,2])*log2(sum(matrix_test3[1,2])) - sum(matrix_test3[2,1])*log2(sum(matrix_test3[2,1])) - sum(matrix_test3[2,2])*log2(sum(matrix_test3[2,2]))
+PIG_3_test = (Entro_Condi + Entro_Class - Entro_Matri)/Entro_Condi;PIG_3_test
+
+#------------------------------------------------------------------------------------------
+#Analyze added value
+train_detail3 = data.frame(train3$accuracy, predict_train3, train3$duration, train3$duration_to_now)
+test_detail3 = data.frame(test3$accuracy, predict_test3, test3$duration, test3$duration_to_now)
+colnames(train_detail3)[3] = "Task_Duration"
+colnames(test_detail3)[3] = "Task_Duration"
+colnames(train_detail3)[4] = "Duration_Till_Trigger"
+colnames(test_detail3)[4] = "Duration_Till_Trigger"
+
+  #Create confision matrix lable and time cost
+    #Train Set
+train_detail3 = train_detail3 %>% 
+  #To lable confusion matrix
+  mutate(TN = ((train3.accuracy=="TRUE")*(predict_train3=="TRUE")),
+         FN = ((train3.accuracy=="FALSE")*(predict_train3=="TRUE")),
+         FP = ((train3.accuracy=="TRUE")*(predict_train3=="FALSE")),
+         TP = ((train3.accuracy=="FALSE")*(predict_train3=="FALSE"))) %>%
+  select(-train3.accuracy,-predict_train3) %>% 
+  #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN) + 1*Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+    #Test Set
+test_detail3 = test_detail3 %>% 
+  #To lable confusion matrix
+  mutate(TN = ((test3.accuracy=="TRUE")*(predict_test3=="TRUE")),
+         FN = ((test3.accuracy=="FALSE")*(predict_test3=="TRUE")),
+         FP = ((test3.accuracy=="TRUE")*(predict_test3=="FALSE")),
+         TP = ((test3.accuracy=="FALSE")*(predict_test3=="FALSE"))) %>%
+  select(-test3.accuracy,-predict_test3) %>%
+  #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN) + Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+  #Time consumption PER EVENT when it is (double typing)/(Somehow omniscient)/(Using predictive model)
+  #Caution: Variables created in this session share names for in different chunk (As they are just interim variable, so I do not want to bother...)
+    #Train Set
+Double_Typing_Cost_a = mean(train_detail3$Cost_Benchmark);Double_Typing_Cost_a
+Omniscient_Cost_a = mean(train_detail3$Cost_Omniscient);Omniscient_Cost_a
+Model_Cost1_a = mean(train_detail3$Cost_Model_ExcludingM);Model_Cost1_a
+M_counts_a = mean(train_detail3$FN)
+    #Test Set
+Double_Typing_Cost_e = mean(test_detail3$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail3$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail3$Cost_Model_ExcludingM);Model_Cost1_e
+M_counts_e = mean(test_detail3$FN)
+
+#Summarise value added: FN_EL short for "False Negative Equivelent Loss"
+FN_EL3 = data.frame(c(train_accurate3*100,PIG_3_train*100,test_accurate3*100,PIG_3_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
+
+colnames(FN_EL3)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL3)[2] = "  "
+colnames(FN_EL3)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL3)[4] = "Time Consumption/Event"
+rownames(FN_EL3)[1] = "Train"
+rownames(FN_EL3)[2] = "  "
+rownames(FN_EL3)[3] = "Test"
+rownames(FN_EL3)[4] = "    "
+FN_EL3
+#238.5 / 210.2
+#5.9+64.2 / 5.8+51.2
+```
+
+
 
 #+20s
 ```{r}
@@ -317,6 +404,7 @@ dt4_keep = dt4 %>%
 dt4_keep = dt4_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
+            duration_to_now = max(rela_time),
             total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
             count_mousemove = sum(mousemove == "Yes")/n(),
             count_mouseclick = sum(mouseclick == "Yes")/n(),
@@ -351,7 +439,7 @@ test4 = dt4_keep[-index4,]
 
 #build model on training data
 n4 = names(dt4_keep)
-f4 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f4 = as.formula(paste("accuracy~", paste(n4[!n4 %in% "accuracy"], collapse = "+")))
 rf4 = randomForest(data = train4,
                       f4, importance = TRUE)
 predict_train4 = predict(rf4)
@@ -365,6 +453,91 @@ test_table4 = table(test4$accuracy, predict_test4)
 kable(test_table4)
 test_accurate4 = sum(diag(test_table4))/nrow(test);test_accurate4
 ```
+
+#Evaluate the +20s Model (Make Sure to Run "+20s" Chunk First)
+```{r}
+#Calculate Information Gain
+matrix_train4=train_table4/sum(train_table4)
+Entro_Condi = -sum(matrix_train4[1,])*log2(sum(matrix_train4[1,]))-sum(matrix_train4[2,])*log2(sum(matrix_train4[2,]))
+Entro_Class = -sum(matrix_train4[,1])*log2(sum(matrix_train4[,1]))-sum(matrix_train4[,2])*log2(sum(matrix_train4[,2]))
+Entro_Matri = -sum(matrix_train4[1,1])*log2(sum(matrix_train4[1,1]))-sum(matrix_train4[1,2])*log2(sum(matrix_train4[1,2]))-sum(matrix_train4[2,1])*log2(sum(matrix_train4[2,1]))-sum(matrix_train4[2,2])*log2(sum(matrix_train4[2,2]))
+PIG_4_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_4_train
+  #---↑Train---↓Test---
+matrix_test4=test_table4/sum(test_table4)
+Entro_Condi = -sum(matrix_test4[1,])*log2(sum(matrix_test4[1,]))-sum(matrix_test4[2,])*log2(sum(matrix_test4[2,]))
+Entro_Class = -sum(matrix_test4[,1])*log2(sum(matrix_test4[,1]))-sum(matrix_test4[,2])*log2(sum(matrix_test4[,2]))
+Entro_Matri = -sum(matrix_test4[1,1])*log2(sum(matrix_test4[1,1]))-sum(matrix_test4[1,2])*log2(sum(matrix_test4[1,2]))-sum(matrix_test4[2,1])*log2(sum(matrix_test4[2,1]))-sum(matrix_test4[2,2])*log2(sum(matrix_test4[2,2]))
+PIG_4_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_4_test
+
+#------------------------------------------------------------------------------------------
+#Analyze added value
+train_detail4 = data.frame(train4$accuracy, predict_train4, train4$duration, train4$duration_to_now)
+test_detail4 = data.frame(test4$accuracy, predict_test4, test4$duration, test4$duration_to_now)
+colnames(train_detail4)[3] = "Task_Duration"
+colnames(test_detail4)[3] = "Task_Duration"
+colnames(train_detail4)[4] = "Duration_Till_Trigger"
+colnames(test_detail4)[4] = "Duration_Till_Trigger"
+
+  #Create confision matrix lable and time cost
+    #Train Set
+train_detail4 = train_detail4 %>% 
+  #To lable confusion matrix
+  mutate(TN = ((train4.accuracy=="TRUE")*(predict_train4=="TRUE")),
+         FN = ((train4.accuracy=="FALSE")*(predict_train4=="TRUE")),
+         FP = ((train4.accuracy=="TRUE")*(predict_train4=="FALSE")),
+         TP = ((train4.accuracy=="FALSE")*(predict_train4=="FALSE"))) %>%
+  select(-train4.accuracy,-predict_train4) %>% 
+  #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN) + 1*Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+    #Test Set
+test_detail4 = test_detail4 %>% 
+  #To lable confusion matrix
+  mutate(TN = ((test4.accuracy=="TRUE")*(predict_test4=="TRUE")),
+         FN = ((test4.accuracy=="FALSE")*(predict_test4=="TRUE")),
+         FP = ((test4.accuracy=="TRUE")*(predict_test4=="FALSE")),
+         TP = ((test4.accuracy=="FALSE")*(predict_test4=="FALSE"))) %>%
+  select(-test4.accuracy,-predict_test4) %>%
+  #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN) + Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+  #Time consumption PER EVENT when it is (double typing)/(Somehow omniscient)/(Using predictive model)
+  #Caution: Variables created in this session share names for in different chunk (As they are just interim variable, so I do not want to bother...)
+    #Train Set
+Double_Typing_Cost_a = mean(train_detail4$Cost_Benchmark);Double_Typing_Cost_a
+Omniscient_Cost_a = mean(train_detail4$Cost_Omniscient);Omniscient_Cost_a
+Model_Cost1_a = mean(train_detail4$Cost_Model_ExcludingM);Model_Cost1_a
+M_counts_a = mean(train_detail4$FN)
+    #Test Set
+Double_Typing_Cost_e = mean(test_detail4$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail4$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail4$Cost_Model_ExcludingM);Model_Cost1_e
+M_counts_e = mean(test_detail4$FN)
+
+#Summarise value added: FN_EL short for "False Negative Equivelent Loss"
+FN_EL4 = data.frame(c(train_accurate4*100,PIG_4_train*100,test_accurate4*100,PIG_4_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
+
+colnames(FN_EL4)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL4)[2] = "  "
+colnames(FN_EL4)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL4)[4] = "Time Consumption/Event"
+rownames(FN_EL4)[1] = "Train"
+rownames(FN_EL4)[2] = "  "
+rownames(FN_EL4)[3] = "Test"
+rownames(FN_EL4)[4] = "    "
+FN_EL4
+#243.1 / 212.3
+#6.5+52.4 / 6.3+40.4
+```
+
+
 
 #+30s
 ```{r}
@@ -380,6 +553,7 @@ dt5_keep = dt5 %>%
 dt5_keep = dt5_keep %>%
   group_by(task_id) %>%
   summarise(duration = duration[1],
+            duration_to_now = max(rela_time),
             total_op = sum(mousemove == "Yes") + sum(mouseclick == "Yes") + sum(keytype != 0),
             count_mousemove = sum(mousemove == "Yes")/n(),
             count_mouseclick = sum(mouseclick == "Yes")/n(),
@@ -414,7 +588,7 @@ test5 = dt5_keep[-index5,]
 
 #build model on training data
 n5 = names(dt5_keep)
-f5 = as.formula(paste("accuracy~", paste(n[!n %in% "accuracy"], collapse = "+")))
+f5 = as.formula(paste("accuracy~", paste(n5[!n5 %in% "accuracy"], collapse = "+")))
 rf5 = randomForest(data = train5,
                       f5, importance = TRUE)
 predict_train5 = predict(rf5)
@@ -429,18 +603,108 @@ kable(test_table5)
 test_accurate5 = sum(diag(test_table5))/nrow(test);test_accurate5
 ```
 
+#Evaluate the +30s Model (Make Sure to Run "+30s" Chunk First)
+```{r}
+#Calculate Information Gain
+matrix_train5=train_table5/sum(train_table5)
+Entro_Condi = -sum(matrix_train5[1,])*log2(sum(matrix_train5[1,]))-sum(matrix_train5[2,])*log2(sum(matrix_train5[2,]))
+Entro_Class = -sum(matrix_train5[,1])*log2(sum(matrix_train5[,1]))-sum(matrix_train5[,2])*log2(sum(matrix_train5[,2]))
+Entro_Matri = -sum(matrix_train5[1,1])*log2(sum(matrix_train5[1,1]))-sum(matrix_train5[1,2])*log2(sum(matrix_train5[1,2]))-sum(matrix_train5[2,1])*log2(sum(matrix_train5[2,1]))-sum(matrix_train5[2,2])*log2(sum(matrix_train5[2,2]))
+PIG_5_train = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_5_train
+  #---↑Train---↓Test---
+matrix_test5=test_table5/sum(test_table5)
+Entro_Condi = -sum(matrix_test5[1,])*log2(sum(matrix_test5[1,]))-sum(matrix_test5[2,])*log2(sum(matrix_test5[2,]))
+Entro_Class = -sum(matrix_test5[,1])*log2(sum(matrix_test5[,1]))-sum(matrix_test5[,2])*log2(sum(matrix_test5[,2]))
+Entro_Matri = -sum(matrix_test5[1,1])*log2(sum(matrix_test5[1,1]))-sum(matrix_test5[1,2])*log2(sum(matrix_test5[1,2]))-sum(matrix_test5[2,1])*log2(sum(matrix_test5[2,1]))-sum(matrix_test5[2,2])*log2(sum(matrix_test5[2,2]))
+PIG_5_test = (Entro_Condi+Entro_Class-Entro_Matri)/Entro_Condi;PIG_5_test
+
+#------------------------------------------------------------------------------------------
+#Analyze added value
+train_detail5 = data.frame(train5$accuracy, predict_train5, train5$duration, train5$duration_to_now)
+test_detail5 = data.frame(test5$accuracy, predict_test5, test5$duration, test5$duration_to_now)
+colnames(train_detail5)[3] = "Task_Duration"
+colnames(test_detail5)[3] = "Task_Duration"
+colnames(train_detail5)[4] = "Duration_Till_Trigger"
+colnames(test_detail5)[4] = "Duration_Till_Trigger"
+
+  #Create confision matrix lable and time cost
+    #Train Set
+train_detail5 = train_detail5 %>% 
+  #To lable confusion matrix
+  mutate(TN = ((train5.accuracy=="TRUE")*(predict_train5=="TRUE")),
+         FN = ((train5.accuracy=="FALSE")*(predict_train5=="TRUE")),
+         FP = ((train5.accuracy=="TRUE")*(predict_train5=="FALSE")),
+         TP = ((train5.accuracy=="FALSE")*(predict_train5=="FALSE"))) %>%
+  select(-train5.accuracy,-predict_train5) %>% 
+  #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN) + 1*Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+    #Test Set
+test_detail5 = test_detail5 %>% 
+  #To lable confusion matrix
+  mutate(TN = ((test5.accuracy=="TRUE")*(predict_test5=="TRUE")),
+         FN = ((test5.accuracy=="FALSE")*(predict_test5=="TRUE")),
+         FP = ((test5.accuracy=="TRUE")*(predict_test5=="FALSE")),
+         TP = ((test5.accuracy=="FALSE")*(predict_test5=="FALSE"))) %>%
+  select(-test5.accuracy,-predict_test5) %>%
+  #To get correspondent time cost
+  mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+         Cost_Omniscient = 2*Task_Duration*(TP+FN) + Task_Duration*(TN+FP),
+         Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+  #Time consumption PER EVENT when it is (double typing)/(Somehow omniscient)/(Using predictive model)
+  #Caution: Variables created in this session share names for in different chunk (As they are just interim variable, so I do not want to bother...)
+    #Train Set
+Double_Typing_Cost_a = mean(train_detail5$Cost_Benchmark);Double_Typing_Cost_a
+Omniscient_Cost_a = mean(train_detail5$Cost_Omniscient);Omniscient_Cost_a
+Model_Cost1_a = mean(train_detail5$Cost_Model_ExcludingM);Model_Cost1_a
+M_counts_a = mean(train_detail5$FN)
+    #Test Set
+Double_Typing_Cost_e = mean(test_detail5$Cost_Benchmark);Double_Typing_Cost_e
+Omniscient_Cost_e = mean(test_detail5$Cost_Omniscient);Omniscient_Cost_e
+Model_Cost1_e = mean(test_detail5$Cost_Model_ExcludingM);Model_Cost1_e
+M_counts_e = mean(test_detail5$FN)
+
+#Summarise value added: FN_EL short for "False Negative Equivelent Loss"
+FN_EL5 = data.frame(c(train_accurate5*100,PIG_5_train*100,test_accurate5*100,PIG_5_test*100) %>% round (2),
+                    c("Double Typing","General","Double Typing","General"),    
+                    c(0,1/M_counts_a,0,1/M_counts_e) %>% round(1),
+                    c(((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),((Omniscient_Cost_a - Model_Cost1_a)/M_counts_a),((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),((Omniscient_Cost_e - Model_Cost1_e)/M_counts_e)) %>% round(1))
+
+colnames(FN_EL5)[1] = "Accuracy & P.I.G (%)"
+colnames(FN_EL5)[2] = "  "
+colnames(FN_EL5)[3] = "Cost to Be Omniscient/Event"
+colnames(FN_EL5)[4] = "Time Consumption/Event"
+rownames(FN_EL5)[1] = "Train"
+rownames(FN_EL5)[2] = "  "
+rownames(FN_EL5)[3] = "Test"
+rownames(FN_EL5)[4] = "    "
+FN_EL5
+#243.3 / 216.4
+#6.7+44.8 / 6.7+33.1
+```
+
+
 
 ```{r}
 #summary on the dynamic model
-summary.dt = data.frame(c(train_accurate3, test_accurate3),
-           c(train_accurate4, test_accurate4),
-           c(train_accurate5, test_accurate5),
-           c(train_accurate2, test_accurate2))
-colnames(summary.dt)[1] = "10s"
-colnames(summary.dt)[2] = "20s"
-colnames(summary.dt)[3] = "30s"
-colnames(summary.dt)[4] = "Full OP"
-rownames(summary.dt)[1] = "training data"
-rownames(summary.dt)[2] = "testing data"
+summary.dt = data.frame(c("Train", "Test", "Train", "Test", "Train", "Test"),
+           c(100*train_accurate3, 100*test_accurate3, 100*PIG_3_train, 100*PIG_3_test, FN_EL3[1,4], FN_EL3[3,4]) %>% round (1),
+           c(100*train_accurate4, 100*test_accurate4, 100*PIG_4_train, 100*PIG_4_test, FN_EL4[1,4], FN_EL4[3,4]) %>% round(1),
+           c(100*train_accurate5, 100*test_accurate5, 100*PIG_5_train, 100*PIG_5_test, FN_EL5[1,4], FN_EL5[3,4]) %>% round(1),
+           c(100*train_accurate2, 100*test_accurate2, 100*PIG_2_train, 100*PIG_2_test, FN_EL2[1,4], FN_EL2[3,4]) %>% round(1))
+colnames(summary.dt)[1] = "Set"
+colnames(summary.dt)[2] = "10s"
+colnames(summary.dt)[3] = "20s"
+colnames(summary.dt)[4] = "30s"
+colnames(summary.dt)[5] = "Full OP"
+rownames(summary.dt)[1] = "Accuracy"
+rownames(summary.dt)[2] = "  "
+rownames(summary.dt)[3] = "P.I.G"
+rownames(summary.dt)[4] = "    "
+rownames(summary.dt)[5] = "FN_EL"
+rownames(summary.dt)[6] = "      "
 summary.dt
 ```
