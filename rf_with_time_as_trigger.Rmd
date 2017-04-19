@@ -237,12 +237,12 @@ dt3 = dt1
 result_trigger = data.frame(time_trigger = integer(),
                             train_accuracy = double(),
                             train_PIG = double(),
-                            train_general_cost = double(),
-                            train_double_typing_cost = double(),
+                            # train_general_cost = double(),
+                            # train_double_typing_cost = double(),
                             test_accuracy = double(),
                             test_PIG = double(),
-                            test_general_cost = double(),
-                            test_double_typing_cost = double(),
+                            # test_general_cost = double(),
+                            # test_double_typing_cost = double(),
                             train_e = integer(),
                             train_f = integer(),
                             train_g = integer(),
@@ -250,7 +250,15 @@ result_trigger = data.frame(time_trigger = integer(),
                             test_e = integer(),
                             test_f = integer(),
                             test_g = integer(),
-                            test_h = integer())
+                            test_h = integer(),
+                            MA_Should_larger = integer(),
+                            Breakeven_MA = double(),
+                            MB_Should_larger =integer(),
+                            Breakeven_MB = double(),
+                            MAT_Should_larger = integer(),
+                            Breakeven_MAT = double(),
+                            MBT_Should_larger = integer(),
+                            Breakeven_MBT = double())
 
 for (i in 1:50) {
   dt3 = dt3 %>%
@@ -316,7 +324,7 @@ for (i in 1:50) {
   test_table3 = table(test3$accuracy, predict_test3)
   kable(test_table3)
   test_accurate3 = sum(diag(test_table3))/nrow(test);test_accurate3
-  #Evaluate the +10s Model (Make Sure to Run "+10s" Chunk First)
+
   #Calculate Information Gain
   matrix_train3=train_table3/sum(train_table3)
   Entro_Condi = -sum(matrix_train3[1,])*log2(sum(matrix_train3[1,])) -   sum(matrix_train3[2,])*log2(sum(matrix_train3[2,]))
@@ -341,54 +349,107 @@ for (i in 1:50) {
   
     #Create confision matrix lable and time cost
       #Train Set
-  train_detail3 = train_detail3 %>% 
-    #To lable confusion matrix
-    mutate(TN = ((train3.accuracy=="TRUE")*(predict_train3=="TRUE")),
+  # train_detail3 = train_detail3 %>% 
+  #   #To lable confusion matrix
+  #   mutate(TN = ((train3.accuracy=="TRUE")*(predict_train3=="TRUE")),
+  #          FN = ((train3.accuracy=="FALSE")*(predict_train3=="TRUE")),
+  #          FP = ((train3.accuracy=="TRUE")*(predict_train3=="FALSE")),
+  #          TP = ((train3.accuracy=="FALSE")*(predict_train3=="FALSE"))) %>%
+  #   select(-train3.accuracy,-predict_train3) %>% 
+  #   #To get correspondent time cost
+  #   mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+  #          Cost_Omniscient = 2*Task_Duration*(TP+FN) + 1*Task_Duration*(TN+FP),
+  #          Cost_Model_ExcludingM = Task_Duration + Duration_Till_Trigger*(TP+FP))
+  # 
+
+  #       #Test Set
+  # test_detail3 = test_detail3 %>% 
+  #   #To lable confusion matrix
+  #   mutate(TN = ((test3.accuracy=="TRUE")*(predict_test3=="TRUE")),
+  #          FN = ((test3.accuracy=="FALSE")*(predict_test3=="TRUE")),
+  #          FP = ((test3.accuracy=="TRUE")*(predict_test3=="FALSE")),
+  #          TP = ((test3.accuracy=="FALSE")*(predict_test3=="FALSE"))) %>%
+  #   select(-test3.accuracy,-predict_test3) %>%
+  #   #To get correspondent time cost
+  #   mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
+  #          Cost_Omniscient = 2*Task_Duration*(TP+FN) + Task_Duration*(TN+FP),
+  #          Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+
+  CR = 0.5
+  train_alt = data.frame(train3$accuracy, predict_train3, train3$duration, train3$duration_to_now)
+  colnames(train_alt)[3] = "Task_Duration"
+  colnames(train_alt)[4] = "Duration_Till_Trigger"
+
+
+  train_alt = train_alt %>%
+    mutate (TN = ((train3.accuracy=="TRUE")*(predict_train3=="TRUE")),
            FN = ((train3.accuracy=="FALSE")*(predict_train3=="TRUE")),
            FP = ((train3.accuracy=="TRUE")*(predict_train3=="FALSE")),
-           TP = ((train3.accuracy=="FALSE")*(predict_train3=="FALSE"))) %>%
-    select(-train3.accuracy,-predict_train3) %>% 
-    #To get correspondent time cost
-    mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
-           Cost_Omniscient = 2*Task_Duration*(TP+FN) + 1*Task_Duration*(TN+FP),
-           Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
-  
-      #Test Set
-  test_detail3 = test_detail3 %>% 
-    #To lable confusion matrix
-    mutate(TN = ((test3.accuracy=="TRUE")*(predict_test3=="TRUE")),
+           TP = ((train3.accuracy=="FALSE")*(predict_train3=="FALSE")),
+           Triggered = (Task_Duration>=i),
+           Overtrigger = (Task_Duration<i))  %>%
+    select(-train3.accuracy,-predict_train3)   %>% 
+    mutate(  CostA1 = 2*Task_Duration,
+             CostA2 = 0.08*(TP+FN),
+             CostB1 = 3*Task_Duration,
+             CostB2 = 0.08*0.08*(TP+TN),
+             CostC1 = Task_Duration*(2+(TP+FP)*1)+Triggered*i,
+             CostC2 = (Triggered*((Task_Duration-CR*i)/(Task_Duration)) + Overtrigger*1)*(TP+TN)*(0.08*0.08))
+    dir_MA = ifelse(mean(train_alt$CostC2)-mean(train_alt$CostA2)>0,0,1);dir_MA
+    Breakeven_MA = (mean(train_alt$CostA1)-mean(train_alt$CostC1))/(mean(train_alt$CostC2)-mean(train_alt$CostA2));Breakeven_MA
+    dir_MB = ifelse(mean(train_alt$CostC2)-mean(train_alt$CostB2)>0,0,1);dir_MB
+    Breakeven_MB = (mean(train_alt$CostB1)-mean(train_alt$CostC1))/(mean(train_alt$CostC2)-mean(train_alt$CostB2));Breakeven_MB
+
+  test_alt = data.frame(test3$accuracy, predict_test3, test3$duration, test3$duration_to_now)
+  colnames(test_alt)[3] = "Task_Duration"
+  colnames(test_alt)[4] = "Duration_Till_Trigger"
+
+  test_alt = test_alt %>%
+    mutate (TN = ((test3.accuracy=="TRUE")*(predict_test3=="TRUE")),
            FN = ((test3.accuracy=="FALSE")*(predict_test3=="TRUE")),
            FP = ((test3.accuracy=="TRUE")*(predict_test3=="FALSE")),
-           TP = ((test3.accuracy=="FALSE")*(predict_test3=="FALSE"))) %>%
-    select(-test3.accuracy,-predict_test3) %>%
-    #To get correspondent time cost
-    mutate(Cost_Benchmark = 3*Task_Duration*(TP+FN) + 2*Task_Duration*(TN+FP),
-           Cost_Omniscient = 2*Task_Duration*(TP+FN) + Task_Duration*(TN+FP),
-           Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
+           TP = ((test3.accuracy=="FALSE")*(predict_test3=="FALSE")),
+           Triggered = (Task_Duration>=i),
+           Overtrigger = (Task_Duration<i))  %>%
+    select(-test3.accuracy,-predict_test3)   %>% 
+    mutate(  CostA1 = 2*Task_Duration,
+             CostA2 = 0.08*(TP+FN),
+             CostB1 = 3*Task_Duration,
+             CostB2 = 0.08*0.08*(TP+TN),
+             CostC1 = Task_Duration*(2+(TP+FP)*1)+Triggered*i,
+             CostC2 = (Triggered*((Task_Duration-CR*i)/(Task_Duration)) + Overtrigger*1)*(TP+TN)*(0.08*0.08))
+    dir_MAT = ifelse(mean(test_alt$CostC2)-mean(test_alt$CostA2)>0,0,1);dir_MAT
+    Breakeven_MAT = (mean(test_alt$CostA1)-mean(test_alt$CostC1))/(mean(test_alt$CostC2)-mean(test_alt$CostA2));Breakeven_MAT 
+    dir_MBT = ifelse(mean(test_alt$CostC2)-mean(test_alt$CostB2)>0,0,1);dir_MBT
+    Breakeven_MBT = (mean(train_alt$CostA1)-mean(train_alt$CostC1))/(mean(train_alt$CostC2)-mean(train_alt$CostA2));Breakeven_MBT
+
+
+
+
   
     #Time consumption PER EVENT when it is (double typing)/(Somehow omniscient)/(Using predictive model)
     #Caution: Variables created in this session share names for in different chunk (As they are just interim variable,   so I do not want to bother...)
       #Train Set
-  Double_Typing_Cost_a = mean(train_detail3$Cost_Benchmark);Double_Typing_Cost_a
-  Omniscient_Cost_a = mean(train_detail3$Cost_Omniscient);Omniscient_Cost_a
-  Model_Cost1_a = mean(train_detail3$Cost_Model_ExcludingM);Model_Cost1_a
-  M_counts_a = mean(train_detail3$FN)
-      #Test Set
-  Double_Typing_Cost_e = mean(test_detail3$Cost_Benchmark);Double_Typing_Cost_e
-  Omniscient_Cost_e = mean(test_detail3$Cost_Omniscient);Omniscient_Cost_e
-  Model_Cost1_e = mean(test_detail3$Cost_Model_ExcludingM);Model_Cost1_e
-  M_counts_e = mean(test_detail3$FN)
+  # Double_Typing_Cost_a = mean(train_detail3$Cost_Benchmark);Double_Typing_Cost_a
+  # Omniscient_Cost_a = mean(train_detail3$Cost_Omniscient);Omniscient_Cost_a
+  # Model_Cost1_a = mean(train_detail3$Cost_Model_ExcludingM);Model_Cost1_a
+  # M_counts_a = mean(train_detail3$FN)
+  #     #Test Set
+  # Double_Typing_Cost_e = mean(test_detail3$Cost_Benchmark);Double_Typing_Cost_e
+  # Omniscient_Cost_e = mean(test_detail3$Cost_Omniscient);Omniscient_Cost_e
+  # Model_Cost1_e = mean(test_detail3$Cost_Model_ExcludingM);Model_Cost1_e
+  # M_counts_e = mean(test_detail3$FN)
   
   #final result for time trigger i
   result_tmp = data.frame(time_trigger = i,
                           train_accuracy = train_accurate3,
                           train_PIG = PIG_3_train,
-                          train_general_cost = 1/M_counts_a,
-                          train_double_typing_cost = ((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),
+                          # train_general_cost = 1/M_counts_a,
+                          # train_double_typing_cost = ((Double_Typing_Cost_a - Model_Cost1_a)/M_counts_a),
                           test_accuracy = test_accurate3,
                           test_PIG = PIG_3_test,
-                          test_general_cost = 1/M_counts_e,
-                          test_double_typing_cost = ((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
+                          # test_general_cost = 1/M_counts_e,
+                          # test_double_typing_cost = ((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
                           train_e = train_table3[1,1],
                           train_f = train_table3[1,2],
                           train_g = train_table3[2,1],
@@ -396,15 +457,81 @@ for (i in 1:50) {
                           test_e = test_table3[1,1],
                           test_f = test_table3[1,2],
                           test_g = test_table3[2,1],
-                          test_h = test_table3[2,2])
+                          test_h = test_table3[2,2],
+                          MA_Should_larger = dir_MA,
+                          Breakeven_MA = Breakeven_MA,
+                          MB_Should_larger =dir_MB,
+                          Breakeven_MB = Breakeven_MB,
+                          MAT_Should_larger = dir_MAT,
+                          Breakeven_MAT = Breakeven_MAT,
+                          MBT_Should_larger = dir_MBT,
+                          Breakeven_MBT = Breakeven_MBT)
   result_trigger[i,] = result_tmp
   print(i)
 }
+
+#Base on the assumption that:
+  #1. P(incorrect-out|receipt-incorrect) = 0.08
+
+  #2. Cost to Validate(N) = Cost to Type = Cost to retype
+
+  #3. There is a for 0.52*0.48 = 0.2496 probability that the double-typing model sends a receipt to re-type when:
+    #The first type is correct and the (first) valiudation is incorrect
+
+  #4. Once it goes to the re-type after validation, the retype procedure will not encounter the FP problem (i.e. Retype always gives out a ferfect typing)
+    #Made this assumption because
+      # a. The probability that retype causes FN is about a*p^2+a*p^3+a*p4+... if you want to calculate 
+      # b. The probability that retype causes FP is about a*b^2+a*b^3+a*b4+... if you want to calculate
+    #But in the real world the cloudfactory is not idiot, a receipt keeps ummatching will end up with a manual profread not endless retyping
+
+colnames(result_trigger)[1] = "trigger"
+# Ti = mean(dt2$duration)
+# result_trigger = result_trigger %>%
+#   mutate(e0 = train_e/(train_e + train_f + train_g + train_h),  
+#          f0 = train_f/(train_e + train_f + train_g + train_h), 
+#          g0 = train_g/(train_e + train_f + train_g + train_h),
+#          h0 = train_h/(train_e + train_f + train_g + train_h),
+#          e1 = test_e/(train_e + train_f + train_g + train_h),
+#          f1 = test_f/(train_e + train_f + train_g + train_h),
+#          g1 = test_g/(train_e + train_f + train_g + train_h),
+#          h1 = test_h/(train_e + train_f + train_g + train_h),
+#          a0 = e0+f0,
+#          b0 = g0+f0,
+#          c0 = e0+g0,
+#          d0 = f0+h0,
+#          a1 = e1+f1,
+#          b1 = g1+f1,
+#          c1 = e1+g1,
+#          d1 = f1+h1,
+#          trigger = trigger,
+#          Train = (c0*trigger-(1.6912-0.92*a0-0.48*b0)*Ti)/(0.0384-0.08*(e0/c0 + f0/d0)),
+#          Test = (c1*trigger-(1.6912-0.92*a1-0.48*b1)*Ti)/(0.0384-0.08*(e1/c1 + f1/d1)))
+# 
+# ggplot(data = Breakeven_FN, aes(x = trigger, y = Train)) + 
+#   geom_point() +
+#   geom_line()+
+#   geom_smooth()
+# 
+# ggplot(data = Breakeven_FN, aes(x = trigger, y = Test)) + 
+#   geom_point() +
+#   geom_line()+
+#   geom_smooth()
+
+ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MA)) +
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+
+ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MB)) +
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+
 ```
 
 ```{r}
 write.csv(result_full, file = "result_full.csv")
-write.csv(result_trigger, file = "result_trigger.csv")
+write.csv(result_trigger, file = "result_trigger_with_CR.csv")
 ```
 
 ```{r}
