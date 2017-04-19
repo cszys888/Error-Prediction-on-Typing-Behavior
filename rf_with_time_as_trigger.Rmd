@@ -251,8 +251,14 @@ result_trigger = data.frame(time_trigger = integer(),
                             test_f = integer(),
                             test_g = integer(),
                             test_h = integer(),
+                            MA_Should_larger = integer(),
                             Breakeven_MA = double(),
-                            Breakeven_ME = double())
+                            MB_Should_larger =integer(),
+                            Breakeven_MB = double(),
+                            MAT_Should_larger = integer(),
+                            Breakeven_MAT = double(),
+                            MBT_Should_larger = integer(),
+                            Breakeven_MBT = double())
 
 for (i in 1:50) {
   dt3 = dt3 %>%
@@ -369,12 +375,12 @@ for (i in 1:50) {
   #          Cost_Omniscient = 2*Task_Duration*(TP+FN) + Task_Duration*(TN+FP),
   #          Cost_Model_ExcludingM = Task_Duration*(TP+FP+TN+FN) + Duration_Till_Trigger*(TP+FP))
 
-  
+  CR = 0.5
   train_alt = data.frame(train3$accuracy, predict_train3, train3$duration, train3$duration_to_now)
   colnames(train_alt)[3] = "Task_Duration"
   colnames(train_alt)[4] = "Duration_Till_Trigger"
 
-  CR = 0.3
+
   train_alt = train_alt %>%
     mutate (TN = ((train3.accuracy=="TRUE")*(predict_train3=="TRUE")),
            FN = ((train3.accuracy=="FALSE")*(predict_train3=="TRUE")),
@@ -389,16 +395,15 @@ for (i in 1:50) {
              CostB2 = 0.08*0.08*(TP+TN),
              CostC1 = Task_Duration*(2+(TP+FP)*1)+Triggered*i,
              CostC2 = (Triggered*((Task_Duration-CR*i)/(Task_Duration)) + Overtrigger*1)*(TP+TN)*(0.08*0.08))
+    dir_MA = ifelse(mean(train_alt$CostC2)-mean(train_alt$CostA2)>0,0,1);dir_MA
     Breakeven_MA = (mean(train_alt$CostA1)-mean(train_alt$CostC1))/(mean(train_alt$CostC2)-mean(train_alt$CostA2));Breakeven_MA
-    a = mean(train_alt$CostC2)-mean(train_alt$CostA2); a
+    dir_MB = ifelse(mean(train_alt$CostC2)-mean(train_alt$CostB2)>0,0,1);dir_MB
     Breakeven_MB = (mean(train_alt$CostB1)-mean(train_alt$CostC1))/(mean(train_alt$CostC2)-mean(train_alt$CostB2));Breakeven_MB
-    b = mean(train_alt$CostC2)-mean(train_alt$CostB2); b
 
   test_alt = data.frame(test3$accuracy, predict_test3, test3$duration, test3$duration_to_now)
   colnames(test_alt)[3] = "Task_Duration"
   colnames(test_alt)[4] = "Duration_Till_Trigger"
-  
-  CR = 0.3
+
   test_alt = test_alt %>%
     mutate (TN = ((test3.accuracy=="TRUE")*(predict_test3=="TRUE")),
            FN = ((test3.accuracy=="FALSE")*(predict_test3=="TRUE")),
@@ -413,7 +418,13 @@ for (i in 1:50) {
              CostB2 = 0.08*0.08*(TP+TN),
              CostC1 = Task_Duration*(2+(TP+FP)*1)+Triggered*i,
              CostC2 = (Triggered*((Task_Duration-CR*i)/(Task_Duration)) + Overtrigger*1)*(TP+TN)*(0.08*0.08))
-    Breakeven_ME = (mean(test_alt$CostA1)-mean(test_alt$CostC1))/(mean(test_alt$CostC2)-mean(test_alt$CostA2));Breakeven_ME 
+    dir_MAT = ifelse(mean(test_alt$CostC2)-mean(test_alt$CostA2)>0,0,1);dir_MAT
+    Breakeven_MAT = (mean(test_alt$CostA1)-mean(test_alt$CostC1))/(mean(test_alt$CostC2)-mean(test_alt$CostA2));Breakeven_MAT 
+    dir_MBT = ifelse(mean(test_alt$CostC2)-mean(test_alt$CostB2)>0,0,1);dir_MBT
+    Breakeven_MBT = (mean(train_alt$CostA1)-mean(train_alt$CostC1))/(mean(train_alt$CostC2)-mean(train_alt$CostA2));Breakeven_MBT
+
+
+
 
   
     #Time consumption PER EVENT when it is (double typing)/(Somehow omniscient)/(Using predictive model)
@@ -447,8 +458,14 @@ for (i in 1:50) {
                           test_f = test_table3[1,2],
                           test_g = test_table3[2,1],
                           test_h = test_table3[2,2],
-                          Breakeven_MA,
-                          Breakeven_ME)
+                          MA_Should_larger = dir_MA,
+                          Breakeven_MA = Breakeven_MA,
+                          MB_Should_larger =dir_MB,
+                          Breakeven_MB = Breakeven_MB,
+                          MAT_Should_larger = dir_MAT,
+                          Breakeven_MAT = Breakeven_MAT,
+                          MBT_Should_larger = dir_MBT,
+                          Breakeven_MBT = Breakeven_MBT)
   result_trigger[i,] = result_tmp
   print(i)
 }
@@ -505,7 +522,7 @@ ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MA)) +
   geom_line()+
   geom_smooth()
 
-ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_ME)) +
+ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MB)) +
   geom_point() +
   geom_line()+
   geom_smooth()
