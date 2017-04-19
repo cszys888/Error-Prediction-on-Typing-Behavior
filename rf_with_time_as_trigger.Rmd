@@ -458,21 +458,9 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 
-p1 = ggplot(data = result_trigger, aes(x = time_trigger, y = train_general_cost)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-p2 = ggplot(data = result_trigger, aes(x = time_trigger, y = test_general_cost)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-p3 = ggplot(data = result_trigger, aes(x = time_trigger, y = train_double_typing_cost)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-p4 = ggplot(data = result_trigger, aes(x = time_trigger, y = test_double_typing_cost)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-multiplot(p1, p2, p3, p4, cols = 2)
+ggplot(data = result_trigger) + 
+  geom_point(aes(x = time_trigger, y = train_accuracy), colour = "red") +
+  geom_line(aes(x = time_trigger, y = train_accuracy), colour = "red") +
+  geom_point(aes(x = time_trigger, y = test_accuracy), colour = "blue") +
+  geom_line(aes(x = time_trigger, y = test_accuracy), colour = "blue") +
 ```
