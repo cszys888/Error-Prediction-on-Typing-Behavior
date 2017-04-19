@@ -219,7 +219,15 @@ result_full = data.frame(train_accuracy = train_accurate2,
                          test_accuracy = test_accurate2,
                          test_PIG = PIG_2_test,
                          test_general_cost = 1/M_counts_e,
-                         test_double_typing_cost = ((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e))
+                         test_double_typing_cost = ((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
+                         train_e = train_table2[1,1],
+                         train_f = train_table2[1,2],
+                         train_g = train_table2[2,1],
+                         train_h = train_table2[2,2],
+                         test_e = test_table2[1,1],
+                         test_f = test_table2[1,2],
+                         test_g = test_table2[2,1],
+                         test_h = test_table2[2,2])
 result_full
 ```
 
@@ -234,7 +242,15 @@ result_trigger = data.frame(time_trigger = integer(),
                             test_accuracy = double(),
                             test_PIG = double(),
                             test_general_cost = double(),
-                            test_double_typing_cost = double())
+                            test_double_typing_cost = double(),
+                            train_e = integer(),
+                            train_f = integer(),
+                            train_g = integer(),
+                            train_h = integer(),
+                            test_e = integer(),
+                            test_f = integer(),
+                            test_g = integer(),
+                            test_h = integer())
 
 for (i in 1:50) {
   dt3 = dt3 %>%
@@ -372,7 +388,15 @@ for (i in 1:50) {
                           test_accuracy = test_accurate3,
                           test_PIG = PIG_3_test,
                           test_general_cost = 1/M_counts_e,
-                          test_double_typing_cost = ((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e))
+                          test_double_typing_cost = ((Double_Typing_Cost_e - Model_Cost1_e)/M_counts_e),
+                          train_e = train_table3[1,1],
+                          train_f = train_table3[1,2],
+                          train_g = train_table3[2,1],
+                          train_h = train_table3[2,2],
+                          test_e = test_table3[1,1],
+                          test_f = test_table3[1,2],
+                          test_g = test_table3[2,1],
+                          test_h = test_table3[2,2])
   result_trigger[i,] = result_tmp
   print(i)
 }
@@ -381,4 +405,74 @@ for (i in 1:50) {
 ```{r}
 write.csv(result_full, file = "result_full.csv")
 write.csv(result_trigger, file = "result_trigger.csv")
+```
+
+```{r}
+which(result_trigger$train_general_cost == max(result_trigger$train_general_cost))
+which(result_trigger$train_double_typing_cost == max(result_trigger$train_double_typing_cost))
+which(result_trigger$test_general_cost == max(result_trigger$test_general_cost))
+which(result_trigger$test_double_typing_cost == max(result_trigger$test_double_typing_cost))
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+p1 = ggplot(data = result_trigger, aes(x = time_trigger, y = train_general_cost)) + 
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+p2 = ggplot(data = result_trigger, aes(x = time_trigger, y = test_general_cost)) + 
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+p3 = ggplot(data = result_trigger, aes(x = time_trigger, y = train_double_typing_cost)) + 
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+p4 = ggplot(data = result_trigger, aes(x = time_trigger, y = test_double_typing_cost)) + 
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+multiplot(p1, p2, p3, p4, cols = 2)
 ```
