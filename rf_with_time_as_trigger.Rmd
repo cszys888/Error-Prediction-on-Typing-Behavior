@@ -527,6 +527,16 @@ ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MB)) +
   geom_line()+
   geom_smooth()
 
+ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MAT)) +
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+
+ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MBT)) +
+  geom_point() +
+  geom_line()+
+  geom_smooth()
+
 ```
 
 ```{r}
