@@ -228,6 +228,58 @@ result_full = data.frame(train_accuracy = train_accurate2,
                          test_f = test_table2[1,2],
                          test_g = test_table2[2,1],
                          test_h = test_table2[2,2])
+
+#This detailed model seems not viable
+p = 0.08
+M = 30
+N = 1
+                         e = test_table2[1,1]/sum(test_table2)
+                         f = test_table2[1,2]/sum(test_table2)
+                         g = test_table2[2,1]/sum(test_table2)
+                         h = test_table2[2,2]/sum(test_table2)
+                         a = e+f
+                         b = g+h
+                         c = e+g
+                         d = f+h
+
+
+#A simplified but viable model
+A1 = 1
+A2 = a*p
+
+B1 = 2
+B2 = a*p^2
+
+C1 = d*A1+c*B1
+C2 = e*p^2+f*p
+
+CostA = A1*N+A2*M;CostA
+CostB = B1*N+B2*M;CostB
+CostC = C1*N+C2*M;CostC
+
+breakeven_M1 = (A1-C1)/(C2-A2);breakeven_M1
+breakeven_M2 = (B1-C1)/(C2-B2);breakeven_M2
+  
+#A more detailed model that counts the retype
+A1 = 1+((1-p)*a+a*b)
+A2 = a*p
+
+B1 = 2+(a*(1-p^2)+a*b^2)
+B2 = a*p^2
+
+C1 = d*A1+c*B1
+C2 = e*p^2+f*p
+
+CostA = A1*N+A2*M;CostA
+CostB = B1*N+B2*M;CostB
+CostC = C1*N+C2*M;CostC
+
+breakeven_M1 = (A1-C1)/(C2-A2);breakeven_M1
+breakeven_M2 = (B1-C1)/(C2-B2);breakeven_M2
+
+
+
+
 result_full
 ```
 
@@ -595,21 +647,9 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 }
 
-p1 = ggplot(data = result_trigger, aes(x = trigger, y = train_PIG)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-p2 = ggplot(data = result_trigger, aes(x = trigger, y = test_PIG)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-p3 = ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_MA)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-p4 = ggplot(data = result_trigger, aes(x = trigger, y = Breakeven_ME)) + 
-  geom_point() +
-  geom_line()+
-  geom_smooth()
-multiplot(p1, p2, p3, p4, cols = 2)
+ggplot(data = result_trigger) + 
+  geom_point(aes(x = time_trigger, y = train_accuracy), colour = "red") +
+  geom_line(aes(x = time_trigger, y = train_accuracy), colour = "red") +
+  geom_point(aes(x = time_trigger, y = test_accuracy), colour = "blue") +
+  geom_line(aes(x = time_trigger, y = test_accuracy), colour = "blue") +
 ```
